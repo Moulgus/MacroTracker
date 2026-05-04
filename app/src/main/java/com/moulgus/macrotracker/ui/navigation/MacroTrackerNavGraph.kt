@@ -10,6 +10,10 @@ import com.moulgus.macrotracker.ui.screens.products.ProductsScreen
 import com.moulgus.macrotracker.ui.screens.settings.SettingsScreen
 import com.moulgus.macrotracker.ui.screens.statistics.StatisticsScreen
 import com.moulgus.macrotracker.ui.screens.today.TodayScreen
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.moulgus.macrotracker.ui.screens.productunits.ProductUnitsScreen
+
 
 private object Routes {
     const val TODAY = "today"
@@ -18,6 +22,22 @@ private object Routes {
     const val ADD_PRODUCT = "add_product"
     const val SETTINGS = "settings"
     const val STATISTICS = "statistics"
+
+    const val PRODUCT_UNITS_BASE = "product_units"
+    const val PRODUCT_ID_ARG = "productID"
+    const val PRODUCT_UNITS = "$PRODUCT_UNITS_BASE/{$PRODUCT_ID_ARG}"
+
+    const val MEAL_ID_ARG = "mealID"
+    const val EDIT_MEAL_BASE = "edit_meal"
+    const val EDIT_MEAL = "$EDIT_MEAL_BASE/{$MEAL_ID_ARG}"
+
+    fun editMealRoute(mealID: Long): String {
+        return "$EDIT_MEAL_BASE/$mealID"
+    }
+
+    fun productUnitsRoute(productID: Long): String {
+        return "$PRODUCT_UNITS_BASE/$productID"
+    }
 }
 
 @Composable
@@ -59,6 +79,9 @@ fun MacroTrackerNavGraph() {
                 },
                 onStatisticsClick = {
                     navController.navigate(Routes.STATISTICS)
+                },
+                onEditMealClick = { mealID ->
+                    navController.navigate(Routes.editMealRoute(mealID))
                 }
             )
         }
@@ -78,6 +101,9 @@ fun MacroTrackerNavGraph() {
                 },
                 onAddProductClick = {
                     navController.navigate(Routes.ADD_PRODUCT)
+                },
+                onProductUnitsClick = { productID ->
+                    navController.navigate(Routes.productUnitsRoute(productID))
                 }
             )
         }
@@ -104,6 +130,46 @@ fun MacroTrackerNavGraph() {
                     returnToToday()
                 }
             )
+        }
+
+        composable(
+            route = Routes.PRODUCT_UNITS,
+            arguments = listOf(
+                navArgument(Routes.PRODUCT_ID_ARG) {
+                    type = NavType.LongType
+                }
+            )
+        ) { backStackEntry ->
+            val productID = backStackEntry.arguments?.getLong(Routes.PRODUCT_ID_ARG)
+
+            if (productID != null) {
+                ProductUnitsScreen(
+                    productID = productID,
+                    onBackClick = {
+                        returnToProducts()
+                    }
+                )
+            }
+        }
+
+        composable(
+            route = Routes.EDIT_MEAL,
+            arguments = listOf(
+                navArgument(Routes.MEAL_ID_ARG) {
+                    type = NavType.LongType
+                }
+            )
+        ) { backStackEntry ->
+            val mealID = backStackEntry.arguments?.getLong(Routes.MEAL_ID_ARG)
+
+            if (mealID != null) {
+                AddMealScreen(
+                    editMealID = mealID,
+                    onBackClick = {
+                        returnToToday()
+                    }
+                )
+            }
         }
     }
 }

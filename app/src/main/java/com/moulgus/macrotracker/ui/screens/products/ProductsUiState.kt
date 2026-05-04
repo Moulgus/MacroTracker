@@ -4,6 +4,7 @@ import com.moulgus.macrotracker.data.local.entity.ProductEntity
 
 data class ProductsUiState(
     val products: List<ProductEntity> = emptyList(),
+    val searchQuery: String = "",
     val form: ProductFormState = ProductFormState(),
     val errorMessage: String? = null,
     val successMessage: String? = null,

@@ -20,13 +20,16 @@ class MacroTrackerApplication : Application() {
             applicationContext,
             AppDatabase::class.java,
             "macro_tracker_database"
-        ).build()
+        )
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     val repository: MacroTrackerRepository by lazy {
         MacroTrackerRepository(
             productDao = database.productDao(),
             productUnitDao = database.productUnitDao(),
+            mealDao = database.mealDao(),
             mealEntryDao = database.mealEntryDao()
         )
     }

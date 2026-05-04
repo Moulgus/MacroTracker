@@ -25,7 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.moulgus.macrotracker.data.local.entity.MealEntryEntity
+import com.moulgus.macrotracker.data.local.model.MealWithEntries
 import java.util.Locale
 
 @Composable
@@ -34,13 +34,17 @@ fun TodayScreen(
     onProductsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onStatisticsClick: () -> Unit,
+    onEditMealClick: (Long) -> Unit,
     viewModel: TodayViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     TodayScreenContent(
         uiState = uiState,
-        onDeleteEntry = viewModel::deleteEntry,
+        onDeleteMealClick = { meal ->
+            viewModel.deleteMeal(meal.meal.mealID)
+        },
+        onEditMealClick = onEditMealClick,
         onAddMealClick = onAddMealClick,
         onProductsClick = onProductsClick,
         onSettingsClick = onSettingsClick,
@@ -51,7 +55,8 @@ fun TodayScreen(
 @Composable
 private fun TodayScreenContent(
     uiState: TodayUiState,
-    onDeleteEntry: (MealEntryEntity) -> Unit,
+    onDeleteMealClick: (MealWithEntries) -> Unit,
+    onEditMealClick: (Long) -> Unit,
     onAddMealClick: () -> Unit,
     onProductsClick: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -121,16 +126,16 @@ private fun TodayScreenContent(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Dzisiejsze wpisy",
+                text = "Dzisiejsze posiłki",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (uiState.entries.isEmpty()) {
+            if (uiState.meals.isEmpty()) {
                 Text(
-                    text = "Nie dodano jeszcze żadnych produktów dzisiaj.",
+                    text = "Nie dodano jeszcze żadnych posiłków dzisiaj.",
                     style = MaterialTheme.typography.bodyMedium
                 )
             } else {
@@ -138,12 +143,17 @@ private fun TodayScreenContent(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(
-                        items = uiState.entries,
-                        key = { it.entryID }
-                    ) { entry ->
-                        MealEntryItem(
-                            entry = entry,
-                            onDeleteClick = { onDeleteEntry(entry) }
+                        items = uiState.meals,
+                        key = { it.meal.mealID }
+                    ) { meal ->
+                        MealItem(
+                            meal = meal,
+                            onEditClick = {
+                                onEditMealClick(meal.meal.mealID)
+                            },
+                            onDeleteClick = {
+                                onDeleteMealClick(meal)
+                            }
                         )
                     }
                 }
@@ -258,8 +268,9 @@ private fun MacroProgressRow(
 }
 
 @Composable
-private fun MealEntryItem(
-    entry: MealEntryEntity,
+private fun MealItem(
+    meal: MealWithEntries,
+    onEditClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
     Card(
@@ -268,27 +279,43 @@ private fun MealEntryItem(
         Column(
             modifier = Modifier.padding(12.dp)
         ) {
+            if (!meal.meal.name.isNullOrBlank()) {
+                Text(
+                    text = meal.meal.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    meal.entries.forEach { entry ->
+                        Text(
+                            text = "${entry.productName} — ${entry.amount.format(1)} ${entry.unitName}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                Column(
+                    modifier = Modifier.padding(start = 12.dp)
+                ) {
                     Text(
-                        text = entry.productName,
-                        style = MaterialTheme.typography.titleMedium,
+                        text = "Kcal: ${meal.kcal.format(0)}",
                         fontWeight = FontWeight.Bold
                     )
 
-                    Text(
-                        text = "${entry.amount.format(1)} ${entry.unitName}",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    Text(text = "B: ${meal.protein.format(1)} g")
+                    Text(text = "W: ${meal.carbs.format(1)} g")
+                    Text(text = "T: ${meal.fat.format(1)} g")
                 }
-
-                Text(
-                    text = "${entry.kcal.format(0)} kcal",
-                    fontWeight = FontWeight.Bold
-                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -297,18 +324,23 @@ private fun MealEntryItem(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = "B: ${entry.protein.format(1)} g  W: ${entry.carbs.format(1)} g  T: ${entry.fat.format(1)} g",
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(
-                onClick = onDeleteClick,
-                modifier = Modifier.fillMaxWidth()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(text = "Usuń")
+                Button(
+                    onClick = onEditClick,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = "Edytuj")
+                }
+
+                Button(
+                    onClick = onDeleteClick,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = "Usuń")
+                }
             }
         }
     }

@@ -4,9 +4,10 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.moulgus.macrotracker.MacroTrackerApplication
-import com.moulgus.macrotracker.data.local.entity.MealEntryEntity
 import com.moulgus.macrotracker.data.local.model.DailyMacroSummary
+import com.moulgus.macrotracker.data.local.model.MealWithEntries
 import com.moulgus.macrotracker.data.settings.UserMacroGoals
+import com.moulgus.macrotracker.util.TrackingDateUtils
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -14,7 +15,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import com.moulgus.macrotracker.util.TrackingDateUtils
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TodayViewModel(
@@ -31,13 +31,13 @@ class TodayViewModel(
     val uiState = selectedDate
         .flatMapLatest { date ->
             combine(
-                repository.observeEntriesForDate(date),
+                repository.observeMealsWithEntriesForDate(date),
                 repository.observeDailyMacroSummary(date),
                 userSettingsRepository.goalsFlow
-            ) { entries: List<MealEntryEntity>, summary: DailyMacroSummary, goals: UserMacroGoals ->
+            ) { meals: List<MealWithEntries>, summary: DailyMacroSummary, goals: UserMacroGoals ->
                 TodayUiState(
                     date = date,
-                    entries = entries,
+                    meals = meals,
                     eatenKcal = summary.kcal,
                     eatenProtein = summary.protein,
                     eatenCarbs = summary.carbs,
@@ -63,15 +63,9 @@ class TodayViewModel(
         selectedDate.value = getTodayDate()
     }
 
-    fun deleteEntry(entry: MealEntryEntity) {
+    fun deleteMeal(mealID: Long) {
         viewModelScope.launch {
-            repository.deleteMealEntry(entry)
-        }
-    }
-
-    fun deleteEntryByID(entryID: Long) {
-        viewModelScope.launch {
-            repository.deleteMealEntryByID(entryID)
+            repository.deleteMealByID(mealID)
         }
     }
 

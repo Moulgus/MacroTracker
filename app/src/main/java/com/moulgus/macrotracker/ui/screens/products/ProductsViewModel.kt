@@ -19,19 +19,38 @@ class ProductsViewModel(
         (application as MacroTrackerApplication).repository
 
     private val formState = MutableStateFlow(ProductFormState())
+    private val searchQuery = MutableStateFlow("")
     private val errorMessage = MutableStateFlow<String?>(null)
     private val successMessage = MutableStateFlow<String?>(null)
 
     private val productsFlow = repository.observeAllProducts()
 
-    val uiState = combine(
+    private val filteredProductsFlow = combine(
         productsFlow,
+        searchQuery
+    ) { products: List<ProductEntity>, query: String ->
+        val cleanQuery = query.trim()
+
+        if (cleanQuery.isBlank()) {
+            products
+        } else {
+            products.filter { product ->
+                product.name.contains(cleanQuery, ignoreCase = true) ||
+                        product.category.contains(cleanQuery, ignoreCase = true)
+            }
+        }
+    }
+
+    val uiState = combine(
+        filteredProductsFlow,
         formState,
         errorMessage,
-        successMessage
-    ) { products, form, error, success ->
+        successMessage,
+        searchQuery
+    ) { products, form, error, success, search ->
         ProductsUiState(
             products = products,
+            searchQuery = search,
             form = form,
             errorMessage = error,
             successMessage = success,
@@ -42,6 +61,10 @@ class ProductsViewModel(
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = ProductsUiState()
     )
+
+    fun changeSearchQuery(value: String) {
+        searchQuery.value = value
+    }
 
     fun changeName(value: String) {
         formState.value = formState.value.copy(nameText = value)

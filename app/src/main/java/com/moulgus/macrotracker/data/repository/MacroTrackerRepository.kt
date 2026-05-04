@@ -1,17 +1,21 @@
 package com.moulgus.macrotracker.data.repository
 
+import com.moulgus.macrotracker.data.local.dao.MealDao
 import com.moulgus.macrotracker.data.local.dao.MealEntryDao
 import com.moulgus.macrotracker.data.local.dao.ProductDao
 import com.moulgus.macrotracker.data.local.dao.ProductUnitDao
+import com.moulgus.macrotracker.data.local.entity.MealEntity
 import com.moulgus.macrotracker.data.local.entity.MealEntryEntity
 import com.moulgus.macrotracker.data.local.entity.ProductEntity
 import com.moulgus.macrotracker.data.local.entity.ProductUnitEntity
 import com.moulgus.macrotracker.data.local.model.DailyMacroSummary
+import com.moulgus.macrotracker.data.local.model.MealWithEntries
 import kotlinx.coroutines.flow.Flow
 
 class MacroTrackerRepository(
     private val productDao: ProductDao,
     private val productUnitDao: ProductUnitDao,
+    private val mealDao: MealDao,
     private val mealEntryDao: MealEntryDao
 ) {
 
@@ -89,6 +93,88 @@ class MacroTrackerRepository(
         productUnitDao.deleteProductUnit(unit)
     }
 
+    fun observeMealsWithEntriesForDate(date: String): Flow<List<MealWithEntries>> {
+        return mealDao.observeMealsWithEntriesForDate(date)
+    }
+
+    suspend fun getMealWithEntriesByID(mealID: Long): MealWithEntries? {
+        return mealDao.getMealWithEntriesByID(mealID)
+    }
+
+    suspend fun addMeal(
+        date: String,
+        name: String?,
+        ingredients: List<MealIngredientDraft>
+    ): Long {
+        val cleanName = name
+            ?.trim()
+            ?.ifBlank { null }
+
+        val meal = MealEntity(
+            name = cleanName,
+            date = date
+        )
+
+        val entries = ingredients.map { ingredient ->
+            MealEntryEntity(
+                mealID = 0,
+                productID = ingredient.productID,
+                productName = ingredient.productName,
+                date = date,
+                amount = ingredient.amount,
+                unitName = ingredient.unitName,
+                amountInBaseUnit = ingredient.amountInBaseUnit,
+                kcal = ingredient.kcal,
+                protein = ingredient.protein,
+                carbs = ingredient.carbs,
+                fat = ingredient.fat
+            )
+        }
+
+        return mealDao.insertMealWithEntries(
+            meal = meal,
+            entries = entries
+        )
+    }
+
+    suspend fun updateMeal(
+        mealID: Long,
+        date: String,
+        name: String?,
+        ingredients: List<MealIngredientDraft>
+    ) {
+        val cleanName = name
+            ?.trim()
+            ?.ifBlank { null }
+
+        val entries = ingredients.map { ingredient ->
+            MealEntryEntity(
+                mealID = mealID,
+                productID = ingredient.productID,
+                productName = ingredient.productName,
+                date = date,
+                amount = ingredient.amount,
+                unitName = ingredient.unitName,
+                amountInBaseUnit = ingredient.amountInBaseUnit,
+                kcal = ingredient.kcal,
+                protein = ingredient.protein,
+                carbs = ingredient.carbs,
+                fat = ingredient.fat
+            )
+        }
+
+        mealDao.updateMealWithEntries(
+            mealID = mealID,
+            name = cleanName,
+            date = date,
+            entries = entries
+        )
+    }
+
+    suspend fun deleteMealByID(mealID: Long) {
+        mealDao.deleteMealByID(mealID)
+    }
+
     fun observeEntriesForDate(date: String): Flow<List<MealEntryEntity>> {
         return mealEntryDao.observeEntriesForDate(date)
     }
@@ -102,39 +188,6 @@ class MacroTrackerRepository(
 
     fun observeDailyMacroSummary(date: String): Flow<DailyMacroSummary> {
         return mealEntryDao.observeDailyMacroSummary(date)
-    }
-
-    suspend fun addMealEntry(
-        product: ProductEntity,
-        date: String,
-        amount: Double,
-        unitName: String,
-        amountInBaseUnit: Double
-    ): Long {
-        val multiplier = amountInBaseUnit / 100.0
-
-        val entry = MealEntryEntity(
-            productID = product.productID,
-            productName = product.name,
-            date = date,
-            amount = amount,
-            unitName = unitName,
-            amountInBaseUnit = amountInBaseUnit,
-            kcal = product.kcalPer100 * multiplier,
-            protein = product.proteinPer100 * multiplier,
-            carbs = product.carbsPer100 * multiplier,
-            fat = product.fatPer100 * multiplier
-        )
-
-        return mealEntryDao.insertMealEntry(entry)
-    }
-
-    suspend fun deleteMealEntry(entry: MealEntryEntity) {
-        mealEntryDao.deleteMealEntry(entry)
-    }
-
-    suspend fun deleteMealEntryByID(entryID: Long) {
-        mealEntryDao.deleteMealEntryByID(entryID)
     }
 
     suspend fun seedDefaultProductsIfNeeded() {

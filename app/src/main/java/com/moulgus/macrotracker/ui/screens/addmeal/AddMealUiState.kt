@@ -8,6 +8,16 @@ data class AddMealUiState(
     val selectedProduct: ProductEntity? = null,
     val productUnits: List<ProductUnitEntity> = emptyList(),
 
+    val editMealID: Long? = null,
+    val isEditMode: Boolean = false,
+
+    val searchQuery: String = "",
+    val mealNameText: String = "",
+
+    val selectedDate: String = "",
+    val selectedDateLabel: String = "",
+    val canMoveToNextDay: Boolean = false,
+
     val amountText: String = "",
     val selectedUnitName: String = "",
 
@@ -15,6 +25,13 @@ data class AddMealUiState(
     val calculatedProtein: Double = 0.0,
     val calculatedCarbs: Double = 0.0,
     val calculatedFat: Double = 0.0,
+
+    val ingredients: List<DraftMealIngredient> = emptyList(),
+
+    val totalKcal: Double = 0.0,
+    val totalProtein: Double = 0.0,
+    val totalCarbs: Double = 0.0,
+    val totalFat: Double = 0.0,
 
     val errorMessage: String? = null,
     val isLoading: Boolean = true
