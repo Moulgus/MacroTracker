@@ -26,5 +26,6 @@ data class ProductEntity(
 
     // true = produkt dodany przez użytkownika
     // false = produkt startowy/domyślny z aplikacji
-    val isCustom: Boolean = true
+    val isCustom: Boolean = true,
+    val isFavorite: Boolean = false,
 )

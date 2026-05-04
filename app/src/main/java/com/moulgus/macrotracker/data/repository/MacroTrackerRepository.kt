@@ -11,11 +11,16 @@ import com.moulgus.macrotracker.data.local.entity.ProductUnitEntity
 import com.moulgus.macrotracker.data.local.model.DailyMacroSummary
 import com.moulgus.macrotracker.data.local.model.MealWithEntries
 import kotlinx.coroutines.flow.Flow
+import com.moulgus.macrotracker.data.local.dao.MealTemplateDao
+import com.moulgus.macrotracker.data.local.entity.MealTemplateEntryEntity
+import com.moulgus.macrotracker.data.local.entity.MealTemplateEntity
+import com.moulgus.macrotracker.data.local.model.MealTemplateWithEntries
 
 class MacroTrackerRepository(
     private val productDao: ProductDao,
     private val productUnitDao: ProductUnitDao,
     private val mealDao: MealDao,
+    private val mealTemplateDao: MealTemplateDao,
     private val mealEntryDao: MealEntryDao
 ) {
 
@@ -61,6 +66,16 @@ class MacroTrackerRepository(
 
     suspend fun deleteProduct(product: ProductEntity) {
         productDao.deleteProduct(product)
+    }
+
+    suspend fun updateProductFavorite(
+        productID: Long,
+        isFavorite: Boolean
+    ) {
+        productDao.updateProductFavorite(
+            productID = productID,
+            isFavorite = isFavorite
+        )
     }
 
     fun observeUnitsForProduct(productID: Long): Flow<List<ProductUnitEntity>> {
@@ -171,6 +186,46 @@ class MacroTrackerRepository(
         )
     }
 
+    fun observeMealTemplatesWithEntries(): Flow<List<MealTemplateWithEntries>> {
+        return mealTemplateDao.observeTemplatesWithEntries()
+    }
+
+    suspend fun getMealTemplateWithEntriesByID(templateID: Long): MealTemplateWithEntries? {
+        return mealTemplateDao.getTemplateWithEntriesByID(templateID)
+    }
+
+    suspend fun addMealTemplate(
+        name: String,
+        ingredients: List<MealIngredientDraft>
+    ): Long {
+        val template = MealTemplateEntity(
+            name = name.trim()
+        )
+
+        val entries = ingredients.map { ingredient ->
+            MealTemplateEntryEntity(
+                templateID = 0,
+                productID = ingredient.productID,
+                productName = ingredient.productName,
+                amount = ingredient.amount,
+                unitName = ingredient.unitName,
+                amountInBaseUnit = ingredient.amountInBaseUnit,
+                kcal = ingredient.kcal,
+                protein = ingredient.protein,
+                carbs = ingredient.carbs,
+                fat = ingredient.fat
+            )
+        }
+
+        return mealTemplateDao.insertTemplateWithEntries(
+            template = template,
+            entries = entries
+        )
+    }
+
+    suspend fun deleteMealTemplateByID(templateID: Long) {
+        mealTemplateDao.deleteTemplateByID(templateID)
+    }
     suspend fun deleteMealByID(mealID: Long) {
         mealDao.deleteMealByID(mealID)
     }

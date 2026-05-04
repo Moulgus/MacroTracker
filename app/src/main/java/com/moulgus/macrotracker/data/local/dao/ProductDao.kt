@@ -36,4 +36,10 @@ interface ProductDao {
 
     @Delete
     suspend fun deleteProduct(product: ProductEntity)
+
+    @Query("UPDATE products SET isFavorite = :isFavorite WHERE productID = :productID")
+    suspend fun updateProductFavorite(
+        productID: Long,
+        isFavorite: Boolean
+    )
 }

@@ -18,8 +18,13 @@ class ProductsViewModel(
     private val repository =
         (application as MacroTrackerApplication).repository
 
+    private val categoryAll = "Wszystkie"
+    private val categoryFavorites = "Ulubione"
+
     private val formState = MutableStateFlow(ProductFormState())
     private val searchQuery = MutableStateFlow("")
+    private val selectedCategory = MutableStateFlow(categoryAll)
+
     private val errorMessage = MutableStateFlow<String?>(null)
     private val successMessage = MutableStateFlow<String?>(null)
 
@@ -27,33 +32,91 @@ class ProductsViewModel(
 
     private val filteredProductsFlow = combine(
         productsFlow,
-        searchQuery
-    ) { products: List<ProductEntity>, query: String ->
+        searchQuery,
+        selectedCategory
+    ) { products: List<ProductEntity>, query: String, category: String ->
         val cleanQuery = query.trim()
 
-        if (cleanQuery.isBlank()) {
-            products
-        } else {
-            products.filter { product ->
-                product.name.contains(cleanQuery, ignoreCase = true) ||
-                        product.category.contains(cleanQuery, ignoreCase = true)
+        products
+            .filter { product ->
+                when (category) {
+                    categoryAll -> true
+                    categoryFavorites -> product.isFavorite
+                    else -> product.category.equals(category, ignoreCase = true)
+                }
             }
-        }
+            .filter { product ->
+                if (cleanQuery.isBlank()) {
+                    true
+                } else {
+                    product.name.contains(cleanQuery, ignoreCase = true) ||
+                            product.category.contains(cleanQuery, ignoreCase = true)
+                }
+            }
+    }
+
+    private val categoryStateFlow = combine(
+        productsFlow,
+        selectedCategory
+    ) { products: List<ProductEntity>, selected: String ->
+        val productCategories = products
+            .map { it.category }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+
+        CategoryState(
+            categories = listOf(categoryAll, categoryFavorites) + productCategories,
+            selectedCategory = selected
+        )
+    }
+
+    private val messageFlow = combine(
+        errorMessage,
+        successMessage
+    ) { error: String?, success: String? ->
+        MessageState(
+            errorMessage = error,
+            successMessage = success
+        )
+    }
+
+    private val productListStateFlow = combine(
+        filteredProductsFlow,
+        categoryStateFlow,
+        searchQuery
+    ) { products: List<ProductEntity>, categoryState: CategoryState, search: String ->
+        ProductListState(
+            products = products,
+            searchQuery = search,
+            categories = categoryState.categories,
+            selectedCategory = categoryState.selectedCategory
+        )
+    }
+
+    private val formMessageStateFlow = combine(
+        formState,
+        messageFlow
+    ) { form: ProductFormState, messages: MessageState ->
+        FormMessageState(
+            form = form,
+            errorMessage = messages.errorMessage,
+            successMessage = messages.successMessage
+        )
     }
 
     val uiState = combine(
-        filteredProductsFlow,
-        formState,
-        errorMessage,
-        successMessage,
-        searchQuery
-    ) { products, form, error, success, search ->
+        productListStateFlow,
+        formMessageStateFlow
+    ) { productList: ProductListState, formMessage: FormMessageState ->
         ProductsUiState(
-            products = products,
-            searchQuery = search,
-            form = form,
-            errorMessage = error,
-            successMessage = success,
+            products = productList.products,
+            searchQuery = productList.searchQuery,
+            categories = productList.categories,
+            selectedCategory = productList.selectedCategory,
+            form = formMessage.form,
+            errorMessage = formMessage.errorMessage,
+            successMessage = formMessage.successMessage,
             isLoading = false
         )
     }.stateIn(
@@ -64,6 +127,19 @@ class ProductsViewModel(
 
     fun changeSearchQuery(value: String) {
         searchQuery.value = value
+    }
+
+    fun selectCategory(category: String) {
+        selectedCategory.value = category
+    }
+
+    fun toggleFavorite(product: ProductEntity) {
+        viewModelScope.launch {
+            repository.updateProductFavorite(
+                productID = product.productID,
+                isFavorite = !product.isFavorite
+            )
+        }
     }
 
     fun changeName(value: String) {
@@ -152,6 +228,7 @@ class ProductsViewModel(
             formState.value = ProductFormState()
             errorMessage.value = null
             successMessage.value = "Dodano produkt."
+
             onSuccess?.invoke()
         }
     }
@@ -177,4 +254,27 @@ class ProductsViewModel(
         errorMessage.value = null
         successMessage.value = null
     }
+
+    private data class CategoryState(
+        val categories: List<String> = emptyList(),
+        val selectedCategory: String = "Wszystkie"
+    )
+
+    private data class MessageState(
+        val errorMessage: String? = null,
+        val successMessage: String? = null
+    )
+
+    private data class ProductListState(
+        val products: List<ProductEntity> = emptyList(),
+        val searchQuery: String = "",
+        val categories: List<String> = emptyList(),
+        val selectedCategory: String = "Wszystkie"
+    )
+
+    private data class FormMessageState(
+        val form: ProductFormState = ProductFormState(),
+        val errorMessage: String? = null,
+        val successMessage: String? = null
+    )
 }

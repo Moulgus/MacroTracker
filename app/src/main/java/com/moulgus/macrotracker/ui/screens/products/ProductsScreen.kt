@@ -25,6 +25,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.moulgus.macrotracker.data.local.entity.ProductEntity
 import java.util.Locale
+import androidx.compose.ui.Alignment
+import com.moulgus.macrotracker.ui.components.FavoriteStarButton
+import com.moulgus.macrotracker.ui.components.ProductCategorySelector
 
 @Composable
 fun ProductsScreen(
@@ -41,6 +44,8 @@ fun ProductsScreen(
         onSearchQueryChange = viewModel::changeSearchQuery,
         onAddProductClick = onAddProductClick,
         onProductUnitsClick = onProductUnitsClick,
+        onCategoryClick = viewModel::selectCategory,
+        onFavoriteClick = viewModel::toggleFavorite,
         onDeleteProductClick = viewModel::deleteProduct
     )
 }
@@ -52,6 +57,8 @@ private fun ProductsScreenContent(
     onSearchQueryChange: (String) -> Unit,
     onAddProductClick: () -> Unit,
     onProductUnitsClick: (Long) -> Unit,
+    onCategoryClick: (String) -> Unit,
+    onFavoriteClick: (ProductEntity) -> Unit,
     onDeleteProductClick: (ProductEntity) -> Unit
 ) {
     val productListState = rememberLazyListState()
@@ -91,6 +98,12 @@ private fun ProductsScreenContent(
                     Text(text = "Szukaj produktu")
                 },
                 singleLine = true
+            )
+
+            ProductCategorySelector(
+                categories = uiState.categories,
+                selectedCategory = uiState.selectedCategory,
+                onCategoryClick = onCategoryClick
             )
 
             Button(
@@ -143,6 +156,7 @@ private fun ProductsScreenContent(
                     ) { product ->
                         ProductListItem(
                             product = product,
+                            onFavoriteClick = { onFavoriteClick(product) },
                             onUnitsClick = { onProductUnitsClick(product.productID) },
                             onDeleteClick = { onDeleteProductClick(product) }
                         )
@@ -156,6 +170,7 @@ private fun ProductsScreenContent(
 @Composable
 private fun ProductListItem(
     product: ProductEntity,
+    onFavoriteClick: () -> Unit,
     onUnitsClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
@@ -168,27 +183,52 @@ private fun ProductListItem(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = product.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                text = product.category,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+
+                        Text(
+                            text = if (product.isCustom) "Własny" else "Domyślny",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
                     Text(
-                        text = product.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        text = "${product.kcalPer100.format(0)} kcal / 100 ${product.baseUnit}",
+                        style = MaterialTheme.typography.bodyMedium
                     )
 
                     Text(
-                        text = product.category,
-                        style = MaterialTheme.typography.bodySmall
+                        text = "B: ${product.proteinPer100.format(1)} g  W: ${product.carbsPer100.format(1)} g  T: ${product.fatPer100.format(1)} g",
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
 
-                Text(
-                    text = if (product.isCustom) "Własny" else "Domyślny",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.SemiBold
+                FavoriteStarButton(
+                    isFavorite = product.isFavorite,
+                    onClick = onFavoriteClick
                 )
             }
 

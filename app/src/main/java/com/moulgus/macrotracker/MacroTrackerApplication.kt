@@ -10,6 +10,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import com.moulgus.macrotracker.widget.MacroTrackerWidgetUpdater
+import com.moulgus.macrotracker.data.local.database.MIGRATION_2_3
+import com.moulgus.macrotracker.widget.MacroTrackerWidgetAlarmScheduler
+import com.moulgus.macrotracker.data.local.database.MIGRATION_3_4
 
 class MacroTrackerApplication : Application() {
 
@@ -21,7 +25,8 @@ class MacroTrackerApplication : Application() {
             AppDatabase::class.java,
             "macro_tracker_database"
         )
-            .fallbackToDestructiveMigration()
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
+            .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
     }
 
@@ -30,6 +35,7 @@ class MacroTrackerApplication : Application() {
             productDao = database.productDao(),
             productUnitDao = database.productUnitDao(),
             mealDao = database.mealDao(),
+            mealTemplateDao = database.mealTemplateDao(),
             mealEntryDao = database.mealEntryDao()
         )
     }
@@ -39,12 +45,20 @@ class MacroTrackerApplication : Application() {
             dataStore = applicationContext.userSettingsDataStore
         )
     }
+    fun refreshWidgets() {
+        applicationScope.launch {
+            MacroTrackerWidgetUpdater.update(applicationContext)
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
 
+        MacroTrackerWidgetAlarmScheduler.scheduleNextRefresh(applicationContext)
+
         applicationScope.launch {
             repository.seedDefaultProductsIfNeeded()
+            MacroTrackerWidgetUpdater.update(applicationContext)
         }
     }
 }

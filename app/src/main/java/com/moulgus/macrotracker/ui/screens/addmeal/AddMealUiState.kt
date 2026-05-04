@@ -2,11 +2,19 @@ package com.moulgus.macrotracker.ui.screens.addmeal
 
 import com.moulgus.macrotracker.data.local.entity.ProductEntity
 import com.moulgus.macrotracker.data.local.entity.ProductUnitEntity
+import com.moulgus.macrotracker.data.local.model.MealTemplateWithEntries
 
 data class AddMealUiState(
     val products: List<ProductEntity> = emptyList(),
     val selectedProduct: ProductEntity? = null,
     val productUnits: List<ProductUnitEntity> = emptyList(),
+
+    val categories: List<String> = emptyList(),
+    val selectedCategory: String = "Wszystkie",
+
+    val templates: List<MealTemplateWithEntries> = emptyList(),
+    val showTemplates: Boolean = false,
+    val templateSavedMessage: String? = null,
 
     val editMealID: Long? = null,
     val isEditMode: Boolean = false,
@@ -35,4 +43,6 @@ data class AddMealUiState(
 
     val errorMessage: String? = null,
     val isLoading: Boolean = true
+
+
 )

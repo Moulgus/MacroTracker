@@ -9,13 +9,15 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.moulgus.macrotracker.widget.MacroTrackerWidgetUpdater
 
 class SettingsViewModel(
     application: Application
 ) : AndroidViewModel(application) {
 
-    private val userSettingsRepository =
-        (application as MacroTrackerApplication).userSettingsRepository
+    private val app = application as MacroTrackerApplication
+
+    private val userSettingsRepository = app.userSettingsRepository
 
     private val formState = MutableStateFlow(SettingsFormState())
     private val errorMessage = MutableStateFlow<String?>(null)
@@ -119,7 +121,7 @@ class SettingsViewModel(
                 carbsGoal = carbsGoal,
                 fatGoal = fatGoal
             )
-
+            app.refreshWidgets()
             errorMessage.value = null
             successMessage.value = "Zapisano cele."
         }

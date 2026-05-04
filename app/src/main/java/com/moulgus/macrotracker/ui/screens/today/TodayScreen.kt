@@ -27,6 +27,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.moulgus.macrotracker.data.local.model.MealWithEntries
 import java.util.Locale
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 
 @Composable
 fun TodayScreen(
@@ -39,12 +48,31 @@ fun TodayScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.syncCurrentTrackingDateIfFollowing()
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     TodayScreenContent(
         uiState = uiState,
         onDeleteMealClick = { meal ->
             viewModel.deleteMeal(meal.meal.mealID)
         },
         onEditMealClick = onEditMealClick,
+        onMoveDateBackClick = viewModel::moveSelectedDateBack,
+        onMoveDateForwardClick = viewModel::moveSelectedDateForward,
+        onTodayDateClick = viewModel::selectCurrentTrackingDate,
         onAddMealClick = onAddMealClick,
         onProductsClick = onProductsClick,
         onSettingsClick = onSettingsClick,
@@ -57,6 +85,9 @@ private fun TodayScreenContent(
     uiState: TodayUiState,
     onDeleteMealClick: (MealWithEntries) -> Unit,
     onEditMealClick: (Long) -> Unit,
+    onMoveDateBackClick: () -> Unit,
+    onMoveDateForwardClick: () -> Unit,
+    onTodayDateClick: () -> Unit,
     onAddMealClick: () -> Unit,
     onProductsClick: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -69,15 +100,14 @@ private fun TodayScreenContent(
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
-            Text(
-                text = "Dzisiaj",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-
-            Text(
-                text = uiState.date,
-                style = MaterialTheme.typography.bodyMedium
+            TodayHeader(
+                title = if (uiState.isCurrentTrackingDate) "Dzisiaj" else "Wybrany dzień",
+                selectedDateLabel = uiState.dateLabel,
+                canMoveToNextDay = uiState.canMoveToNextDay,
+                onSettingsClick = onSettingsClick,
+                onMoveDateBackClick = onMoveDateBackClick,
+                onMoveDateForwardClick = onMoveDateForwardClick,
+                onTodayDateClick = onTodayDateClick
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -112,15 +142,6 @@ private fun TodayScreenContent(
                 ) {
                     Text(text = "Statystyki")
                 }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(
-                onClick = onSettingsClick,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = "Ustawienia")
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -161,7 +182,95 @@ private fun TodayScreenContent(
         }
     }
 }
+@Composable
+private fun TodayHeader(
+    title: String,
+    selectedDateLabel: String,
+    canMoveToNextDay: Boolean,
+    onSettingsClick: () -> Unit,
+    onMoveDateBackClick: () -> Unit,
+    onMoveDateForwardClick: () -> Unit,
+    onTodayDateClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
 
+            Button(
+                onClick = onSettingsClick,
+                modifier = Modifier.size(42.dp),
+                shape = CircleShape,
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Text(
+                    text = "⚙",
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            Text(
+                text = selectedDateLabel,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = onMoveDateBackClick,
+                    modifier = Modifier.size(36.dp),
+                    shape = CircleShape,
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text(text = "←")
+                }
+
+                Button(
+                    onClick = onMoveDateForwardClick,
+                    enabled = canMoveToNextDay,
+                    modifier = Modifier.size(36.dp),
+                    shape = CircleShape,
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text(text = "→")
+                }
+
+                Button(
+                    onClick = onTodayDateClick,
+                    modifier = Modifier.height(36.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
+                ) {
+                    Text(
+                        text = "Dzisiaj",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+    }
+}
 @Composable
 private fun DailySummaryCard(
     uiState: TodayUiState

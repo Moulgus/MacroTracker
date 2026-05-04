@@ -17,20 +17,23 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import com.moulgus.macrotracker.widget.MacroTrackerWidgetUpdater
+import com.moulgus.macrotracker.data.local.model.MealTemplateWithEntries
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AddMealViewModel(
     application: Application
 ) : AndroidViewModel(application) {
 
-    private val repository =
-        (application as MacroTrackerApplication).repository
+    private val app = application as MacroTrackerApplication
+
+    private val repository = app.repository
 
     private val isoFormatter = DateTimeFormatter.ISO_LOCAL_DATE
     private val labelFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
     private val selectedProductID = MutableStateFlow<Long?>(null)
     private val editMealID = MutableStateFlow<Long?>(null)
-
+    private val showTemplates = MutableStateFlow(false)
     private val searchQuery = MutableStateFlow("")
     private val mealNameText = MutableStateFlow("")
     private val selectedDate = MutableStateFlow(TrackingDateUtils.getCurrentTrackingDate())
@@ -38,28 +41,87 @@ class AddMealViewModel(
     private val selectedUnitName = MutableStateFlow("")
     private val errorMessage = MutableStateFlow<String?>(null)
     private val ingredients = MutableStateFlow<List<DraftMealIngredient>>(emptyList())
-
+    private val templateSavedMessage = MutableStateFlow<String?>(null)
     private var nextDraftIngredientID = 1L
-
+    private val categoryAll = "Wszystkie"
+    private val categoryFavorites = "Ulubione"
+    private val selectedCategory = MutableStateFlow(categoryAll)
     private var loadedEditMealID: Long? = null
 
     private val productsFlow = repository.observeAllProducts()
 
-    private val filteredProductsFlow = combine(
-        productsFlow,
+    private val templatesFlow = repository.observeMealTemplatesWithEntries()
+
+    private val filteredTemplatesFlow = combine(
+        templatesFlow,
         searchQuery
-    ) { products: List<ProductEntity>, query: String ->
+    ) { templates: List<MealTemplateWithEntries>, query: String ->
         val cleanQuery = query.trim()
 
         if (cleanQuery.isBlank()) {
-            products
+            templates
         } else {
-            products.filter { product ->
-                product.name.contains(cleanQuery, ignoreCase = true) ||
-                        product.category.contains(cleanQuery, ignoreCase = true)
+            templates.filter { template ->
+                template.template.name.contains(cleanQuery, ignoreCase = true) ||
+                        template.entries.any { entry ->
+                            entry.productName.contains(cleanQuery, ignoreCase = true)
+                        }
             }
         }
     }
+
+    private val templateStateFlow = combine(
+        filteredTemplatesFlow,
+        showTemplates,
+        templateSavedMessage
+    ) { templates: List<MealTemplateWithEntries>, show: Boolean, message: String? ->
+        TemplateState(
+            templates = templates,
+            showTemplates = show,
+            templateSavedMessage = message
+        )
+    }
+
+    private val filteredProductsFlow = combine(
+        productsFlow,
+        searchQuery,
+        selectedCategory
+    ) { products: List<ProductEntity>, query: String, category: String ->
+        val cleanQuery = query.trim()
+
+        products
+            .filter { product ->
+                when (category) {
+                    categoryAll -> true
+                    categoryFavorites -> product.isFavorite
+                    else -> product.category.equals(category, ignoreCase = true)
+                }
+            }
+            .filter { product ->
+                if (cleanQuery.isBlank()) {
+                    true
+                } else {
+                    product.name.contains(cleanQuery, ignoreCase = true) ||
+                            product.category.contains(cleanQuery, ignoreCase = true)
+                }
+            }
+    }
+    private val categoryStateFlow = combine(
+        productsFlow,
+        selectedCategory
+    ) { products: List<ProductEntity>, selected: String ->
+        val productCategories = products
+            .map { it.category }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+
+        CategoryState(
+            categories = listOf(categoryAll, categoryFavorites) + productCategories,
+            selectedCategory = selected
+        )
+    }
+
     private val selectedProductFlow = combine(
         productsFlow,
         selectedProductID
@@ -78,12 +140,15 @@ class AddMealViewModel(
     private val productSelectionFlow = combine(
         filteredProductsFlow,
         selectedProductFlow,
-        productUnitsFlow
-    ) { products: List<ProductEntity>, selectedProduct: ProductEntity?, productUnits: List<ProductUnitEntity> ->
+        productUnitsFlow,
+        categoryStateFlow
+    ) { products: List<ProductEntity>, selectedProduct: ProductEntity?, productUnits: List<ProductUnitEntity>, categoryState: CategoryState ->
         ProductSelectionState(
             products = products,
             selectedProduct = selectedProduct,
-            productUnits = productUnits
+            productUnits = productUnits,
+            categories = categoryState.categories,
+            selectedCategory = categoryState.selectedCategory
         )
     }
 
@@ -129,8 +194,9 @@ class AddMealViewModel(
         productSelectionFlow,
         inputFlow,
         ingredients,
-        editMealID
-    ) { productSelection: ProductSelectionState, input: InputState, ingredientList: List<DraftMealIngredient>, currentEditMealID: Long? ->
+        editMealID,
+        templateStateFlow
+    ) { productSelection: ProductSelectionState, input: InputState, ingredientList: List<DraftMealIngredient>, currentEditMealID: Long?, templateState: TemplateState ->
         val calculatedValues = calculateMacros(
             product = productSelection.selectedProduct,
             productUnits = productSelection.productUnits,
@@ -141,8 +207,13 @@ class AddMealViewModel(
 
         AddMealUiState(
             products = productSelection.products,
+            categories = productSelection.categories,
+            selectedCategory = productSelection.selectedCategory,
             selectedProduct = productSelection.selectedProduct,
             productUnits = productSelection.productUnits,
+            templates = templateState.templates,
+            showTemplates = templateState.showTemplates,
+            templateSavedMessage = templateState.templateSavedMessage,
             editMealID = currentEditMealID,
             isEditMode = currentEditMealID != null,
             searchQuery = input.searchQuery,
@@ -170,6 +241,19 @@ class AddMealViewModel(
         initialValue = AddMealUiState()
     )
 
+    fun selectCategory(category: String) {
+        selectedCategory.value = category
+        errorMessage.value = null
+    }
+
+    fun toggleFavorite(product: ProductEntity) {
+        viewModelScope.launch {
+            repository.updateProductFavorite(
+                productID = product.productID,
+                isFavorite = !product.isFavorite
+            )
+        }
+    }
     fun setEditMealID(mealID: Long?) {
         if (mealID == null) {
             editMealID.value = null
@@ -221,6 +305,81 @@ class AddMealViewModel(
         errorMessage.value = null
     }
 
+    fun toggleTemplates() {
+        showTemplates.value = !showTemplates.value
+        errorMessage.value = null
+    }
+
+    fun addTemplateToCurrentMeal(templateID: Long) {
+        viewModelScope.launch {
+            val template = repository.getMealTemplateWithEntriesByID(templateID)
+
+            if (template == null) {
+                errorMessage.value = "Nie znaleziono szablonu."
+                return@launch
+            }
+
+            val draftIngredients = template.entries.map { entry ->
+                DraftMealIngredient(
+                    draftIngredientID = nextDraftIngredientID++,
+                    productID = entry.productID,
+                    productName = entry.productName,
+                    amount = entry.amount,
+                    unitName = entry.unitName,
+                    amountInBaseUnit = entry.amountInBaseUnit,
+                    kcal = entry.kcal,
+                    protein = entry.protein,
+                    carbs = entry.carbs,
+                    fat = entry.fat
+                )
+            }
+
+            ingredients.value = ingredients.value + draftIngredients
+
+            if (mealNameText.value.isBlank()) {
+                mealNameText.value = template.template.name
+            }
+
+            showTemplates.value = false
+            errorMessage.value = null
+        }
+    }
+
+    fun saveCurrentMealAsTemplate() {
+        val state = uiState.value
+
+        val templateName = state.mealNameText.trim()
+
+        if (templateName.isBlank()) {
+            errorMessage.value = "Wpisz nazwę posiłku, żeby zapisać go jako szablon."
+            return
+        }
+
+        if (state.ingredients.isEmpty()) {
+            errorMessage.value = "Dodaj składniki, zanim zapiszesz szablon."
+            return
+        }
+
+        viewModelScope.launch {
+            repository.addMealTemplate(
+                name = templateName,
+                ingredients = state.ingredients.map { it.toRepositoryDraft() }
+            )
+
+            errorMessage.value = null
+            templateSavedMessage.value = "Dodano szablon."
+        }
+    }
+
+    fun deleteTemplate(templateID: Long) {
+        viewModelScope.launch {
+            repository.deleteMealTemplateByID(templateID)
+            errorMessage.value = null
+        }
+    }
+    fun dismissTemplateSavedPopup() {
+        templateSavedMessage.value = null
+    }
     fun moveSelectedDateBack() {
         selectedDate.value = selectedDate.value.minusDays(1)
         errorMessage.value = null
@@ -340,6 +499,7 @@ class AddMealViewModel(
                 )
             }
 
+            app.refreshWidgets()
             onSuccess()
         }
     }
@@ -401,7 +561,9 @@ class AddMealViewModel(
     private data class ProductSelectionState(
         val products: List<ProductEntity> = emptyList(),
         val selectedProduct: ProductEntity? = null,
-        val productUnits: List<ProductUnitEntity> = emptyList()
+        val productUnits: List<ProductUnitEntity> = emptyList(),
+        val categories: List<String> = emptyList(),
+        val selectedCategory: String = "Wszystkie"
     )
 
     private data class SearchMealDateState(
@@ -430,5 +592,15 @@ class AddMealViewModel(
         val protein: Double = 0.0,
         val carbs: Double = 0.0,
         val fat: Double = 0.0
+    )
+
+    private data class TemplateState(
+        val templates: List<MealTemplateWithEntries> = emptyList(),
+        val showTemplates: Boolean = false,
+        val templateSavedMessage: String? = null
+    )
+    private data class CategoryState(
+        val categories: List<String> = emptyList(),
+        val selectedCategory: String = "Wszystkie"
     )
 }

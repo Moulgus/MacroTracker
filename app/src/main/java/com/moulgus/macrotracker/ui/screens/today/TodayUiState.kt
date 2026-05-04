@@ -4,6 +4,10 @@ import com.moulgus.macrotracker.data.local.model.MealWithEntries
 
 data class TodayUiState(
     val date: String = "",
+    val dateLabel: String = "",
+    val canMoveToNextDay: Boolean = false,
+    val isCurrentTrackingDate: Boolean = true,
+
     val meals: List<MealWithEntries> = emptyList(),
 
     val eatenKcal: Double = 0.0,
