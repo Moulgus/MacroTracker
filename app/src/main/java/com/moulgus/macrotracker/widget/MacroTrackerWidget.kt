@@ -42,10 +42,10 @@ class MacroTrackerWidget : GlanceAppWidget() {
 private fun MacroTrackerWidgetContent(
     data: MacroWidgetData
 ) {
-    val backgroundColor = ColorProvider(Color(0xFF101010))
-    val primaryTextColor = ColorProvider(Color.White)
-    val secondaryTextColor = ColorProvider(Color(0xFFE0E0E0))
-    val dateTextColor = ColorProvider(Color(0xFFBDBDBD))
+    val backgroundColor = ColorProvider(Color(0xFF49CCB5))
+    val primaryTextColor = ColorProvider(Color(0xFF00201B))
+    val secondaryTextColor = ColorProvider(Color(0xFF003D35))
+    val dateTextColor = ColorProvider(Color(0xFF005E53))
 
     Box(
         modifier = GlanceModifier

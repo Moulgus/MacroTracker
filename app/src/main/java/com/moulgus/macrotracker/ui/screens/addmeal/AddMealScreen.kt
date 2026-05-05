@@ -58,6 +58,8 @@ import androidx.compose.foundation.ScrollState
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.lazy.itemsIndexed
 import com.moulgus.macrotracker.ui.components.BackHeader
+import com.moulgus.macrotracker.R
+import com.moulgus.macrotracker.ui.components.SmallActionIconButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -251,20 +253,10 @@ private fun AddMealScreenContent(
                     .padding(horizontal = 16.dp)
                     .padding(top = 16.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = if (uiState.isEditMode) "Edytuj posiłek" else "Dodaj posiłek",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Button(onClick = onBackClick) {
-                        Text(text = "Wróć")
-                    }
-                }
+                BackHeader(
+                    title = if (uiState.isEditMode) "Edytuj posiłek" else "Dodaj posiłek",
+                    onBackClick = onBackClick
+                )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -590,22 +582,25 @@ private fun AddMealScreenContent(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
+                    SmallActionIconButton(
+                        iconResID = R.drawable.ic_arrow_previous,
+                        contentDescription = "Poprzedni dzień",
                         onClick = onMoveDateBackClick,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(text = "← dzień")
-                    }
+                        buttonSize = 45.dp,
+                        iconSize = 36.dp
+                    )
 
-                    Button(
+                    SmallActionIconButton(
+                        iconResID = R.drawable.ic_arrow_next,
+                        contentDescription = "Następny dzień",
                         onClick = onMoveDateForwardClick,
                         enabled = canMoveToNextDay,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(text = "dzień →")
-                    }
+                        buttonSize = 45.dp,
+                        iconSize = 36.dp
+                    )
                 }
 
                 Text(
@@ -719,21 +714,21 @@ private fun AddMealScreenContent(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Button(
-                            onClick = onUseClick,
-                            modifier = Modifier.weight(1f)
+                            onClick = onUseClick
                         ) {
                             Text(text = "Użyj")
                         }
 
-                        Button(
+                        SmallActionIconButton(
+                            iconResID = R.drawable.ic_delete,
+                            contentDescription = "Usuń szablon",
                             onClick = onDeleteClick,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(text = "Usuń")
-                        }
+                            tint = MaterialTheme.colorScheme.error
+                        )
                     }
                 }
             }

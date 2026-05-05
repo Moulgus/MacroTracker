@@ -39,6 +39,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.moulgus.macrotracker.util.formatSmart
 import com.moulgus.macrotracker.ui.components.EmptyStateCard
+import com.moulgus.macrotracker.R
+import com.moulgus.macrotracker.ui.components.HeaderIconButton
+import com.moulgus.macrotracker.ui.components.SmallActionIconButton
+import androidx.compose.ui.Alignment
 
 @Composable
 fun TodayScreen(
@@ -261,17 +265,11 @@ private fun TodayHeader(
                 fontWeight = FontWeight.Bold
             )
 
-            Button(
-                onClick = onSettingsClick,
-                modifier = Modifier.size(42.dp),
-                shape = CircleShape,
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Text(
-                    text = "⚙",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
+            HeaderIconButton(
+                iconResID = R.drawable.ic_settings,
+                contentDescription = "Ustawienia",
+                onClick = onSettingsClick
+            )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -291,24 +289,22 @@ private fun TodayHeader(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
             ) {
-                Button(
+                SmallActionIconButton(
+                    iconResID = R.drawable.ic_arrow_previous,
+                    contentDescription = "Poprzedni dzień",
                     onClick = onMoveDateBackClick,
-                    modifier = Modifier.size(36.dp),
-                    shape = CircleShape,
-                    contentPadding = PaddingValues(0.dp)
-                ) {
-                    Text(text = "←")
-                }
+                    buttonSize = 36.dp,
+                    iconSize = 30.dp
+                )
 
-                Button(
+                SmallActionIconButton(
+                    iconResID = R.drawable.ic_arrow_next,
+                    contentDescription = "Następny dzień",
                     onClick = onMoveDateForwardClick,
                     enabled = canMoveToNextDay,
-                    modifier = Modifier.size(36.dp),
-                    shape = CircleShape,
-                    contentPadding = PaddingValues(0.dp)
-                ) {
-                    Text(text = "→")
-                }
+                    buttonSize = 36.dp,
+                    iconSize = 30.dp
+                )
 
                 Button(
                     onClick = onTodayDateClick,
@@ -490,21 +486,21 @@ private fun MealItem(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(
-                    onClick = onEditClick,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(text = "Edytuj")
-                }
+                SmallActionIconButton(
+                    iconResID = R.drawable.ic_edit,
+                    contentDescription = "Edytuj posiłek",
+                    onClick = onEditClick
+                )
 
-                Button(
+                SmallActionIconButton(
+                    iconResID = R.drawable.ic_delete,
+                    contentDescription = "Usuń posiłek",
                     onClick = onDeleteClick,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(text = "Usuń")
-                }
+                    tint = MaterialTheme.colorScheme.error
+                )
             }
         }
     }

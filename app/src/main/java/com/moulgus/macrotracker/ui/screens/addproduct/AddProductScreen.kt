@@ -25,6 +25,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.moulgus.macrotracker.ui.screens.products.ProductFormState
 import com.moulgus.macrotracker.ui.screens.products.ProductsViewModel
 import androidx.compose.runtime.LaunchedEffect
+import com.moulgus.macrotracker.ui.components.BackHeader
 
 @Composable
 fun AddProductScreen(
@@ -80,20 +81,10 @@ private fun AddProductScreenContent(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = if (isEditMode) "Edytuj produkt" else "Dodaj produkt",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Button(onClick = onBackClick) {
-                    Text(text = "Wróć")
-                }
-            }
+            BackHeader(
+                title = if (isEditMode) "Edytuj produkt" else "Dodaj produkt",
+                onBackClick = onBackClick
+            )
 
             Card(
                 modifier = Modifier.fillMaxWidth()

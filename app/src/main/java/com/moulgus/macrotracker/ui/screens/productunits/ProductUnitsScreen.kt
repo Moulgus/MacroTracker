@@ -32,6 +32,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.moulgus.macrotracker.util.formatSmart
 import com.moulgus.macrotracker.ui.components.EmptyStateCard
+import com.moulgus.macrotracker.ui.components.BackHeader
+import com.moulgus.macrotracker.R
+import com.moulgus.macrotracker.ui.components.SmallActionIconButton
+import androidx.compose.ui.Alignment
 
 @Composable
 fun ProductUnitsScreen(
@@ -113,20 +117,10 @@ private fun ProductUnitsScreenContent(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Jednostki",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Button(onClick = onBackClick) {
-                        Text(text = "Wróć")
-                    }
-                }
+                BackHeader(
+                    title = "Jednostki",
+                    onBackClick = onBackClick
+                )
             }
 
             val product = uiState.product
@@ -325,11 +319,17 @@ private fun UnitListItem(
                 text = "1 ${unit.unitName} = ${unit.amountInBaseUnit.formatSmart(1)} ${product.baseUnit}"
             )
 
-            Button(
-                onClick = onDeleteClick,
-                modifier = Modifier.fillMaxWidth()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "Usuń jednostkę")
+                SmallActionIconButton(
+                    iconResID = R.drawable.ic_delete,
+                    contentDescription = "Usuń jednostkę",
+                    onClick = onDeleteClick,
+                    tint = MaterialTheme.colorScheme.error
+                )
             }
         }
     }

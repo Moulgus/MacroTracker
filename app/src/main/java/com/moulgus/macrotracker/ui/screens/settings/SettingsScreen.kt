@@ -27,7 +27,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-
+import com.moulgus.macrotracker.ui.components.BackHeader
 
 @Composable
 fun SettingsScreen(
@@ -134,20 +134,10 @@ private fun SettingsScreenContent(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Ustawienia",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Button(onClick = onBackClick) {
-                        Text(text = "Wróć")
-                    }
-                }
+                BackHeader(
+                    title = "Ustawienia",
+                    onBackClick = onBackClick
+                )
             }
 
             item {

@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 
 @Composable
 fun HeaderIconButton(
@@ -38,17 +39,27 @@ fun SmallActionIconButton(
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    enabled: Boolean = true,
+    buttonSize: Dp = 40.dp,
+    iconSize: Dp = 22.dp
 ) {
+    val finalTint = if (enabled) {
+        tint
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
+    }
+
     IconButton(
         onClick = onClick,
-        modifier = modifier.size(40.dp)
+        enabled = enabled,
+        modifier = modifier.size(buttonSize)
     ) {
         Icon(
             painter = painterResource(id = iconResID),
             contentDescription = contentDescription,
-            tint = tint,
-            modifier = Modifier.size(22.dp)
+            tint = finalTint,
+            modifier = Modifier.size(iconSize)
         )
     }
 }

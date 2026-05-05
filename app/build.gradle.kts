@@ -74,4 +74,5 @@ dependencies {
 
     implementation(libs.glance.appwidget)
     implementation(libs.work.runtime.ktx)
+    implementation(libs.core.splashscreen)
 }

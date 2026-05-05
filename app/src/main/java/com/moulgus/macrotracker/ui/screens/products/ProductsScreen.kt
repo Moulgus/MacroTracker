@@ -33,6 +33,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.moulgus.macrotracker.util.formatSmart
 import com.moulgus.macrotracker.ui.components.EmptyStateCard
+import com.moulgus.macrotracker.ui.components.BackHeader
+import com.moulgus.macrotracker.R
+import com.moulgus.macrotracker.ui.components.SmallActionIconButton
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.height
 
 @Composable
 fun ProductsScreen(
@@ -124,20 +129,10 @@ private fun ProductsScreenContent(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Produkty",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Button(onClick = onBackClick) {
-                    Text(text = "Wróć")
-                }
-            }
+            BackHeader(
+                title = "Produkty",
+                onBackClick = onBackClick
+            )
 
             OutlinedTextField(
                 value = uiState.searchQuery,
@@ -301,29 +296,30 @@ private fun ProductListItem(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Button(
                     onClick = onUnitsClick,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.height(40.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                 ) {
                     Text(text = "Jednostki")
                 }
 
-                Button(
-                    onClick = onEditClick,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(text = "Edytuj")
-                }
-            }
+                SmallActionIconButton(
+                    iconResID = R.drawable.ic_edit,
+                    contentDescription = "Edytuj produkt",
+                    onClick = onEditClick
+                )
 
-            if (product.isCustom) {
-                Button(
-                    onClick = onDeleteClick,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = "Usuń produkt")
+                if (product.isCustom) {
+                    SmallActionIconButton(
+                        iconResID = R.drawable.ic_delete,
+                        contentDescription = "Usuń produkt",
+                        onClick = onDeleteClick,
+                        tint = MaterialTheme.colorScheme.error
+                    )
                 }
             }
         }

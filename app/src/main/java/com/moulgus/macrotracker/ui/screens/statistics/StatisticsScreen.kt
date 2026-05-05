@@ -30,6 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlin.math.max
 import com.moulgus.macrotracker.util.formatSmart
+import com.moulgus.macrotracker.ui.components.BackHeader
 
 @Composable
 fun StatisticsScreen(
@@ -61,20 +62,10 @@ private fun StatisticsScreenContent(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Statystyki",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Button(onClick = onBackClick) {
-                        Text(text = "Wróć")
-                    }
-                }
+                BackHeader(
+                    title = "Statystyki",
+                    onBackClick = onBackClick
+                )
             }
 
             item {

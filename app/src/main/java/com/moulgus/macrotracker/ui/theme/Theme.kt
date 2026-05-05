@@ -5,49 +5,89 @@ import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import androidx.compose.ui.graphics.Color
 
+private val ColorOnTealDark = Color(0xFF00201B)
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = AppTeal,
+    onPrimary = ColorOnTealDark,
+
+    primaryContainer = AppTealDarker,
+    onPrimaryContainer = TextLight,
+
+    secondary = AppTealLight,
+    onSecondary = AppTealDarker,
+
+    background = DarkBackground,
+    onBackground = TextLight,
+
+    surface = DarkSurface,
+    onSurface = TextLight,
+
+    surfaceVariant = DarkSurfaceVariant,
+    onSurfaceVariant = Color(0xFFC8D0D4),
+
+    outline = DarkOutline,
+
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005)
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
+    primary = AppTealDark,
     onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+
+    primaryContainer = AppTealLight,
+    onPrimaryContainer = AppTealDarker,
+
+    secondary = AppTeal,
+    onSecondary = TextDark,
+
+    background = LightBackground,
+    onBackground = TextDark,
+
+    surface = LightSurface,
+    onSurface = TextDark,
+
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = Color(0xFF4A5555),
+
+    outline = LightOutline,
+
+    error = Color(0xFFBA1A1A),
+    onError = Color.White
 )
 
 @Composable
 fun MacroTrackerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
+    val colorScheme = if (darkTheme) {
+        DarkColorScheme
+    } else {
+        LightColorScheme
+    }
 
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+    val view = LocalView.current
+
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+
+            window.statusBarColor = colorScheme.background.toArgb()
+            window.navigationBarColor = colorScheme.background.toArgb()
+
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme
+        }
     }
 
     MaterialTheme(
