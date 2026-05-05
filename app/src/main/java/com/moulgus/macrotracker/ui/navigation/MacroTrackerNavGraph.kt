@@ -27,6 +27,14 @@ private object Routes {
     const val PRODUCT_ID_ARG = "productID"
     const val PRODUCT_UNITS = "$PRODUCT_UNITS_BASE/{$PRODUCT_ID_ARG}"
 
+    const val EDIT_PRODUCT_BASE = "edit_product"
+    const val EDIT_PRODUCT_ID_ARG = "editProductID"
+    const val EDIT_PRODUCT = "$EDIT_PRODUCT_BASE/{$EDIT_PRODUCT_ID_ARG}"
+
+    fun editProductRoute(productID: Long): String {
+        return "$EDIT_PRODUCT_BASE/$productID"
+    }
+
     const val MEAL_ID_ARG = "mealID"
     const val EDIT_MEAL_BASE = "edit_meal"
     const val EDIT_MEAL = "$EDIT_MEAL_BASE/{$MEAL_ID_ARG}"
@@ -102,10 +110,33 @@ fun MacroTrackerNavGraph() {
                 onAddProductClick = {
                     navController.navigate(Routes.ADD_PRODUCT)
                 },
+                onEditProductClick = { productID ->
+                    navController.navigate(Routes.editProductRoute(productID))
+                },
                 onProductUnitsClick = { productID ->
                     navController.navigate(Routes.productUnitsRoute(productID))
                 }
             )
+        }
+
+        composable(
+            route = Routes.EDIT_PRODUCT,
+            arguments = listOf(
+                navArgument(Routes.EDIT_PRODUCT_ID_ARG) {
+                    type = NavType.LongType
+                }
+            )
+        ) { backStackEntry ->
+            val productID = backStackEntry.arguments?.getLong(Routes.EDIT_PRODUCT_ID_ARG)
+
+            if (productID != null) {
+                AddProductScreen(
+                    editProductID = productID,
+                    onBackClick = {
+                        returnToProducts()
+                    }
+                )
+            }
         }
 
         composable(Routes.ADD_PRODUCT) {

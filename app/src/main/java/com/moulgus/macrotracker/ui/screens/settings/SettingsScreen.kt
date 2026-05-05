@@ -21,6 +21,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.AlertDialog
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+
 
 @Composable
 fun SettingsScreen(
@@ -29,6 +36,67 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    var showImportConfirmDialog by remember {
+        mutableStateOf(false)
+    }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            viewModel.exportBackup(uri)
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.importBackup(uri)
+        }
+    }
+
+    if (showImportConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showImportConfirmDialog = false
+            },
+            title = {
+                Text(text = "Zaimportować dane?")
+            },
+            text = {
+                Text(
+                    text = "Import zastąpi obecne produkty, posiłki, szablony, jednostki i ustawienia. Tej operacji nie można cofnąć."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showImportConfirmDialog = false
+                        importLauncher.launch(
+                            arrayOf(
+                                "application/json",
+                                "text/*",
+                                "*/*"
+                            )
+                        )
+                    }
+                ) {
+                    Text(text = "Importuj")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = {
+                        showImportConfirmDialog = false
+                    }
+                ) {
+                    Text(text = "Anuluj")
+                }
+            }
+        )
+    }
+
     SettingsScreenContent(
         uiState = uiState,
         onBackClick = onBackClick,
@@ -36,7 +104,13 @@ fun SettingsScreen(
         onProteinGoalChange = viewModel::changeProteinGoal,
         onCarbsGoalChange = viewModel::changeCarbsGoal,
         onFatGoalChange = viewModel::changeFatGoal,
-        onSaveClick = viewModel::saveSettings
+        onSaveClick = viewModel::saveSettings,
+        onExportBackupClick = {
+            exportLauncher.launch("macro_tracker_backup_${System.currentTimeMillis()}.json")
+        },
+        onImportBackupClick = {
+            showImportConfirmDialog = true
+        }
     )
 }
 
@@ -48,7 +122,9 @@ private fun SettingsScreenContent(
     onProteinGoalChange: (String) -> Unit,
     onCarbsGoalChange: (String) -> Unit,
     onFatGoalChange: (String) -> Unit,
-    onSaveClick: () -> Unit
+    onSaveClick: () -> Unit,
+    onExportBackupClick: () -> Unit,
+    onImportBackupClick: () -> Unit
 ) {
     Scaffold { innerPadding ->
         LazyColumn(
@@ -145,6 +221,41 @@ private fun SettingsScreenContent(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(text = "Zapisz cele")
+                        }
+                    }
+                }
+            }
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = "Backup danych",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            text = "Eksport zapisuje produkty, posiłki, jednostki, szablony, ulubione i cele do pliku JSON.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+
+                        Button(
+                            onClick = onExportBackupClick,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(text = "Eksportuj dane")
+                        }
+
+                        Button(
+                            onClick = onImportBackupClick,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(text = "Importuj dane")
                         }
                     }
                 }

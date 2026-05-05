@@ -26,7 +26,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.moulgus.macrotracker.data.local.entity.ProductEntity
 import com.moulgus.macrotracker.data.local.entity.ProductUnitEntity
-import java.util.Locale
+import androidx.compose.material3.AlertDialog
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.moulgus.macrotracker.util.formatSmart
+import com.moulgus.macrotracker.ui.components.EmptyStateCard
 
 @Composable
 fun ProductUnitsScreen(
@@ -59,6 +64,47 @@ private fun ProductUnitsScreenContent(
     onAddUnitClick: () -> Unit,
     onDeleteUnitClick: (ProductUnitEntity) -> Unit
 ) {
+    var unitToDelete by remember {
+        mutableStateOf<ProductUnitEntity?>(null)
+    }
+
+    if (unitToDelete != null) {
+        val unit = unitToDelete!!
+
+        AlertDialog(
+            onDismissRequest = {
+                unitToDelete = null
+            },
+            title = {
+                Text(text = "Usunąć jednostkę?")
+            },
+            text = {
+                Text(
+                    text = "Jednostka „${unit.unitName}” zostanie usunięta. Tej operacji nie można cofnąć."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteUnitClick(unit)
+                        unitToDelete = null
+                    }
+                ) {
+                    Text(text = "Usuń")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = {
+                        unitToDelete = null
+                    }
+                ) {
+                    Text(text = "Anuluj")
+                }
+            }
+        )
+    }
+
     Scaffold { innerPadding ->
         LazyColumn(
             modifier = Modifier
@@ -117,9 +163,9 @@ private fun ProductUnitsScreenContent(
 
                 if (uiState.units.isEmpty()) {
                     item {
-                        Text(
-                            text = "Brak dodatkowych jednostek dla tego produktu.",
-                            style = MaterialTheme.typography.bodyMedium
+                        EmptyStateCard(
+                            title = "Brak dodatkowych jednostek",
+                            message = "Ten produkt ma tylko jednostkę bazową. Możesz dodać np. łyżeczkę, szklankę, sztukę albo porcję."
                         )
                     }
                 } else {
@@ -130,7 +176,7 @@ private fun ProductUnitsScreenContent(
                         UnitListItem(
                             product = product,
                             unit = unit,
-                            onDeleteClick = { onDeleteUnitClick(unit) }
+                            onDeleteClick = { unitToDelete = unit }
                         )
                     }
                 }
@@ -170,11 +216,11 @@ private fun ProductInfoCard(
             HorizontalDivider()
 
             Text(
-                text = "${product.kcalPer100.format(0)} kcal / 100 ${product.baseUnit}"
+                text = "${product.kcalPer100.formatSmart(0)} kcal / 100 ${product.baseUnit}"
             )
 
             Text(
-                text = "B: ${product.proteinPer100.format(1)} g  W: ${product.carbsPer100.format(1)} g  T: ${product.fatPer100.format(1)} g"
+                text = "B: ${product.proteinPer100.formatSmart(1)} g  W: ${product.carbsPer100.formatSmart(1)} g  T: ${product.fatPer100.formatSmart(1)} g"
             )
         }
     }
@@ -276,7 +322,7 @@ private fun UnitListItem(
             )
 
             Text(
-                text = "1 ${unit.unitName} = ${unit.amountInBaseUnit.format(1)} ${product.baseUnit}"
+                text = "1 ${unit.unitName} = ${unit.amountInBaseUnit.formatSmart(1)} ${product.baseUnit}"
             )
 
             Button(
@@ -287,8 +333,4 @@ private fun UnitListItem(
             }
         }
     }
-}
-
-private fun Double.format(decimals: Int): String {
-    return "%.${decimals}f".format(Locale.US, this)
 }

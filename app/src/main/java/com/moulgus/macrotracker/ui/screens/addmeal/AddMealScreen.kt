@@ -23,7 +23,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetScaffoldState
@@ -38,7 +37,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.moulgus.macrotracker.data.local.entity.ProductEntity
-import java.util.Locale
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
@@ -51,6 +49,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.navigationBarsPadding
 import com.moulgus.macrotracker.ui.components.FavoriteStarButton
 import com.moulgus.macrotracker.ui.components.ProductCategorySelector
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.moulgus.macrotracker.util.formatSmart
+import com.moulgus.macrotracker.ui.components.EmptyStateCard
+import androidx.compose.foundation.ScrollState
+import kotlinx.coroutines.delay
+import androidx.compose.foundation.lazy.itemsIndexed
+import com.moulgus.macrotracker.ui.components.BackHeader
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,7 +73,7 @@ fun AddMealScreen(
     }
 
     val sheetState = rememberStandardBottomSheetState(
-        initialValue = SheetValue.PartiallyExpanded,
+        initialValue = SheetValue.Hidden,
         skipHiddenState = false
     )
 
@@ -145,6 +152,12 @@ private fun AddMealScreenContent(
     val isSheetHidden = scaffoldState.bottomSheetState.currentValue == SheetValue.Hidden
     val productListState = rememberLazyListState()
 
+    val bottomSheetScrollState = rememberScrollState()
+
+    var templateToDelete by remember {
+        mutableStateOf<MealTemplateWithEntries?>(null)
+    }
+
     LaunchedEffect(uiState.searchQuery) {
         if (uiState.products.isNotEmpty()) {
             productListState.animateScrollToItem(0)
@@ -167,6 +180,42 @@ private fun AddMealScreenContent(
             }
         )
     }
+    if (templateToDelete != null) {
+        val template = templateToDelete!!
+
+        AlertDialog(
+            onDismissRequest = {
+                templateToDelete = null
+            },
+            title = {
+                Text(text = "Usunąć szablon?")
+            },
+            text = {
+                Text(
+                    text = "Szablon „${template.template.name}” zostanie usunięty. Tej operacji nie można cofnąć."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteTemplateClick(template.template.templateID)
+                        templateToDelete = null
+                    }
+                ) {
+                    Text(text = "Usuń")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = {
+                        templateToDelete = null
+                    }
+                ) {
+                    Text(text = "Anuluj")
+                }
+            }
+        )
+    }
 
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
@@ -177,6 +226,7 @@ private fun AddMealScreenContent(
         sheetContent = {
             AddMealBottomSheetContent(
                 uiState = uiState,
+                scrollState = bottomSheetScrollState,
                 onMealNameChange = onMealNameChange,
                 onMoveDateBackClick = onMoveDateBackClick,
                 onMoveDateForwardClick = onMoveDateForwardClick,
@@ -276,9 +326,13 @@ private fun AddMealScreenContent(
                     if (uiState.showTemplates) {
                         if (uiState.templates.isEmpty()) {
                             item {
-                                Text(
-                                    text = "Brak szablonów.",
-                                    style = MaterialTheme.typography.bodyMedium
+                                EmptyStateCard(
+                                    title = "Brak szablonów",
+                                    message = if (uiState.searchQuery.isBlank()) {
+                                        "Nie masz jeszcze zapisanych szablonów. Ułóż posiłek, wpisz jego nazwę i zapisz go jako szablon."
+                                    } else {
+                                        "Nie znaleziono szablonu pasującego do wpisanej frazy."
+                                    }
                                 )
                             }
                         } else {
@@ -290,9 +344,19 @@ private fun AddMealScreenContent(
                                     template = template,
                                     onUseClick = {
                                         onUseTemplateClick(template.template.templateID)
+
+                                        coroutineScope.launch {
+                                            scaffoldState.bottomSheetState.expand()
+
+                                            delay(200L)
+
+                                            bottomSheetScrollState.animateScrollTo(
+                                                bottomSheetScrollState.maxValue
+                                            )
+                                        }
                                     },
                                     onDeleteClick = {
-                                        onDeleteTemplateClick(template.template.templateID)
+                                        templateToDelete = template
                                     }
                                 )
                             }
@@ -300,16 +364,20 @@ private fun AddMealScreenContent(
                     } else {
                         if (uiState.products.isEmpty()) {
                             item {
-                                Text(
-                                    text = "Nie znaleziono produktu.",
-                                    style = MaterialTheme.typography.bodyMedium
+                                EmptyStateCard(
+                                    title = "Nie znaleziono produktu",
+                                    message = if (uiState.searchQuery.isBlank() && uiState.selectedCategory == "Wszystkie") {
+                                        "Lista produktów jest pusta. Dodaj produkt w ekranie Produkty."
+                                    } else {
+                                        "Nie ma produktu pasującego do wybranej kategorii lub wpisanej frazy."
+                                    }
                                 )
                             }
                         } else {
-                            items(
+                            itemsIndexed(
                                 items = uiState.products,
-                                key = { it.productID }
-                            ) { product ->
+                                key = { _, product -> product.productID }
+                            ) { index, product ->
                                 ProductItem(
                                     product = product,
                                     isSelected = uiState.selectedProduct?.productID == product.productID,
@@ -318,6 +386,10 @@ private fun AddMealScreenContent(
 
                                         coroutineScope.launch {
                                             scaffoldState.bottomSheetState.show()
+
+                                            productListState.animateScrollToItem(
+                                                index = index
+                                            )
                                         }
                                     },
                                     onFavoriteClick = {
@@ -354,6 +426,7 @@ private fun AddMealScreenContent(
         @Composable
         private fun AddMealBottomSheetContent(
             uiState: AddMealUiState,
+            scrollState: ScrollState,
             onMealNameChange: (String) -> Unit,
             onMoveDateBackClick: () -> Unit,
             onMoveDateForwardClick: () -> Unit,
@@ -370,7 +443,7 @@ private fun AddMealScreenContent(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
                     .padding(bottom = 16.dp)
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(scrollState)
             ) {
                 Text(
                     text = if (uiState.selectedProduct != null) {
@@ -391,8 +464,19 @@ private fun AddMealScreenContent(
                     label = {
                         Text(text = "Ilość")
                     },
-                    singleLine = true
+                    singleLine = true,
+                    isError = uiState.ingredientErrorMessage != null
                 )
+                if (uiState.selectedProduct == null && uiState.ingredientErrorMessage != null) {
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = uiState.ingredientErrorMessage,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -567,12 +651,12 @@ private fun AddMealScreenContent(
                         )
 
                         Text(
-                            text = "${product.kcalPer100.format(0)} kcal / 100 ${product.baseUnit}",
+                            text = "${product.kcalPer100.formatSmart(0)} kcal / 100 ${product.baseUnit}",
                             style = MaterialTheme.typography.bodyMedium
                         )
 
                         Text(
-                            text = "B: ${product.proteinPer100.format(1)} g  W: ${product.carbsPer100.format(1)} g  T: ${product.fatPer100.format(1)} g",
+                            text = "B: ${product.proteinPer100.formatSmart(1)} g  W: ${product.carbsPer100.formatSmart(1)} g  T: ${product.fatPer100.formatSmart(1)} g",
                             style = MaterialTheme.typography.bodySmall
                         )
 
@@ -616,7 +700,7 @@ private fun AddMealScreenContent(
 
                     template.entries.forEach { entry ->
                         Text(
-                            text = "${entry.productName} — ${entry.amount.format(1)} ${entry.unitName}",
+                            text = "${entry.productName} — ${entry.amount.formatSmart(1)} ${entry.unitName}",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -624,11 +708,11 @@ private fun AddMealScreenContent(
                     HorizontalDivider()
 
                     Text(
-                        text = "${template.kcal.format(0)} kcal | B: ${template.protein.format(1)} W: ${
-                            template.carbs.format(
+                        text = "${template.kcal.formatSmart(0)} kcal | B: ${template.protein.formatSmart(1)} W: ${
+                            template.carbs.formatSmart(
                                 1
                             )
-                        } T: ${template.fat.format(1)}",
+                        } T: ${template.fat.formatSmart(1)}",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -667,11 +751,26 @@ private fun AddMealScreenContent(
                 addAll(uiState.productUnits.map { it.unitName })
             }
 
-            Text(
-                text = "Jednostka",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Jednostka",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                if (uiState.ingredientErrorMessage != null) {
+                    Text(
+                        text = uiState.ingredientErrorMessage,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -709,16 +808,16 @@ private fun AddMealScreenContent(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Text(text = "Kalorie: ${uiState.calculatedKcal.format(0)} kcal")
+                    Text(text = "Kalorie: ${uiState.calculatedKcal.formatSmart(0)} kcal")
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                     Text(
-                        text = "B: ${uiState.calculatedProtein.format(1)} g  W: ${
-                            uiState.calculatedCarbs.format(
+                        text = "B: ${uiState.calculatedProtein.formatSmart(1)} g  W: ${
+                            uiState.calculatedCarbs.formatSmart(
                                 1
                             )
-                        } g  T: ${uiState.calculatedFat.format(1)} g"
+                        } g  T: ${uiState.calculatedFat.formatSmart(1)} g"
                     )
                 }
             }
@@ -747,7 +846,10 @@ private fun AddMealScreenContent(
                     )
 
                     if (ingredients.isEmpty()) {
-                        Text(text = "Brak składników.")
+                        EmptyStateCard(
+                            title = "Brak składników",
+                            message = "Wybierz produkt z listy, wpisz ilość i kliknij „Dodaj składnik do posiłku”."
+                        )
                     } else {
                         ingredients.forEach { ingredient ->
                             Row(
@@ -759,7 +861,7 @@ private fun AddMealScreenContent(
                                 ) {
                                     Text(
                                         text = "${ingredient.productName} — ${
-                                            ingredient.amount.format(
+                                            ingredient.amount.formatSmart(
                                                 1
                                             )
                                         } ${ingredient.unitName}",
@@ -767,12 +869,12 @@ private fun AddMealScreenContent(
                                     )
 
                                     Text(
-                                        text = "${ingredient.kcal.format(0)} kcal | B: ${
-                                            ingredient.protein.format(
+                                        text = "${ingredient.kcal.formatSmart(0)} kcal | B: ${
+                                            ingredient.protein.formatSmart(
                                                 1
                                             )
-                                        } W: ${ingredient.carbs.format(1)} T: ${
-                                            ingredient.fat.format(
+                                        } W: ${ingredient.carbs.formatSmart(1)} T: ${
+                                            ingredient.fat.formatSmart(
                                                 1
                                             )
                                         }",
@@ -793,13 +895,13 @@ private fun AddMealScreenContent(
                         HorizontalDivider()
 
                         Text(
-                            text = "Razem: ${totalKcal.format(0)} kcal",
+                            text = "Razem: ${totalKcal.formatSmart(0)} kcal",
                             fontWeight = FontWeight.Bold
                         )
 
                         Text(
-                            text = "B: ${totalProtein.format(1)} g  W: ${totalCarbs.format(1)} g  T: ${
-                                totalFat.format(
+                            text = "B: ${totalProtein.formatSmart(1)} g  W: ${totalCarbs.formatSmart(1)} g  T: ${
+                                totalFat.formatSmart(
                                     1
                                 )
                             } g"
@@ -809,6 +911,3 @@ private fun AddMealScreenContent(
             }
         }
 
-        private fun Double.format(decimals: Int): String {
-            return "%.${decimals}f".format(Locale.US, this)
-        }

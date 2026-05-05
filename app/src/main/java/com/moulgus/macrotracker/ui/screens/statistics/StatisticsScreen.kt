@@ -28,8 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import java.util.Locale
 import kotlin.math.max
+import com.moulgus.macrotracker.util.formatSmart
 
 @Composable
 fun StatisticsScreen(
@@ -253,7 +253,7 @@ private fun LineMacroChart(
             )
 
             drawContext.canvas.nativeCanvas.drawText(
-                value.format(0),
+                value.formatSmart(0),
                 0f,
                 y + 4.dp.toPx(),
                 labelPaint
@@ -275,7 +275,7 @@ private fun LineMacroChart(
             )
 
             drawContext.canvas.nativeCanvas.drawText(
-                "Cel: ${goal.format(0)}",
+                "Cel: ${goal.formatSmart(0)}",
                 plotLeft,
                 goalY - 6.dp.toPx(),
                 labelPaint
@@ -390,19 +390,19 @@ private fun StatisticsSummaryCard(
             )
 
             Text(
-                text = "Średnio: ${uiState.averageValue.format(1)} ${uiState.selectedMetric.unit}"
+                text = "Średnio: ${uiState.averageValue.formatSmart(1)} ${uiState.selectedMetric.unit}"
             )
 
             Text(
-                text = "Najwięcej: ${uiState.highestValue.format(1)} ${uiState.selectedMetric.unit}"
+                text = "Najwięcej: ${uiState.highestValue.formatSmart(1)} ${uiState.selectedMetric.unit}"
             )
 
             Text(
-                text = "Najmniej: ${uiState.lowestValue.format(1)} ${uiState.selectedMetric.unit}"
+                text = "Najmniej: ${uiState.lowestValue.formatSmart(1)} ${uiState.selectedMetric.unit}"
             )
 
             Text(
-                text = "Cel dzienny: ${uiState.selectedGoal.format(1)} ${uiState.selectedMetric.unit}"
+                text = "Cel dzienny: ${uiState.selectedGoal.formatSmart(1)} ${uiState.selectedMetric.unit}"
             )
         }
     }
@@ -433,15 +433,11 @@ private fun DailyStatsList(
                     Text(text = day.label)
 
                     Text(
-                        text = "${day.valueForMetric(uiState.selectedMetric).format(1)} ${uiState.selectedMetric.unit}",
+                        text = "${day.valueForMetric(uiState.selectedMetric).formatSmart(1)} ${uiState.selectedMetric.unit}",
                         fontWeight = FontWeight.SemiBold
                     )
                 }
             }
         }
     }
-}
-
-private fun Double.format(decimals: Int): String {
-    return "%.${decimals}f".format(Locale.US, this)
 }

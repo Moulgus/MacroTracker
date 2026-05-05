@@ -24,16 +24,23 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.moulgus.macrotracker.ui.screens.products.ProductFormState
 import com.moulgus.macrotracker.ui.screens.products.ProductsViewModel
+import androidx.compose.runtime.LaunchedEffect
 
 @Composable
 fun AddProductScreen(
     onBackClick: () -> Unit,
+    editProductID: Long? = null,
     viewModel: ProductsViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    LaunchedEffect(editProductID) {
+        viewModel.setEditProductID(editProductID)
+    }
+
     AddProductScreenContent(
         form = uiState.form,
+        isEditMode = uiState.isEditMode,
         errorMessage = uiState.errorMessage,
         onBackClick = onBackClick,
         onNameChange = viewModel::changeName,
@@ -44,7 +51,7 @@ fun AddProductScreen(
         onCarbsChange = viewModel::changeCarbs,
         onFatChange = viewModel::changeFat,
         onAddProductClick = {
-            viewModel.addProduct(
+            viewModel.saveProduct(
                 onSuccess = onBackClick
             )
         }
@@ -54,6 +61,7 @@ fun AddProductScreen(
 @Composable
 private fun AddProductScreenContent(
     form: ProductFormState,
+    isEditMode: Boolean,
     errorMessage: String?,
     onBackClick: () -> Unit,
     onNameChange: (String) -> Unit,
@@ -77,7 +85,7 @@ private fun AddProductScreenContent(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Dodaj produkt",
+                    text = if (isEditMode) "Edytuj produkt" else "Dodaj produkt",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -181,7 +189,13 @@ private fun AddProductScreenContent(
                         onClick = onAddProductClick,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(text = "Zapisz produkt")
+                        Text(
+                            text = if (isEditMode) {
+                                "Zapisz zmiany"
+                            } else {
+                                "Zapisz produkt"
+                            }
+                        )
                     }
                 }
             }

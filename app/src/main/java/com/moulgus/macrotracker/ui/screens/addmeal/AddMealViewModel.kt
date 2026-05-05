@@ -40,6 +40,7 @@ class AddMealViewModel(
     private val amountText = MutableStateFlow("")
     private val selectedUnitName = MutableStateFlow("")
     private val errorMessage = MutableStateFlow<String?>(null)
+    private val ingredientErrorMessage = MutableStateFlow<String?>(null)
     private val ingredients = MutableStateFlow<List<DraftMealIngredient>>(emptyList())
     private val templateSavedMessage = MutableStateFlow<String?>(null)
     private var nextDraftIngredientID = 1L
@@ -167,12 +168,14 @@ class AddMealViewModel(
     private val amountUnitErrorFlow = combine(
         amountText,
         selectedUnitName,
-        errorMessage
-    ) { amount: String, unitName: String, error: String? ->
+        errorMessage,
+        ingredientErrorMessage
+    ) { amount: String, unitName: String, error: String?, ingredientError: String? ->
         AmountUnitErrorState(
             amountText = amount,
             selectedUnitName = unitName,
-            errorMessage = error
+            errorMessage = error,
+            ingredientErrorMessage = ingredientError
         )
     }
 
@@ -186,7 +189,8 @@ class AddMealViewModel(
             selectedDate = searchMealDate.selectedDate,
             amountText = amountUnitError.amountText,
             selectedUnitName = amountUnitError.selectedUnitName,
-            errorMessage = amountUnitError.errorMessage
+            errorMessage = amountUnitError.errorMessage,
+            ingredientErrorMessage = amountUnitError.ingredientErrorMessage
         )
     }
 
@@ -232,6 +236,7 @@ class AddMealViewModel(
             totalProtein = ingredientList.sumOf { it.protein },
             totalCarbs = ingredientList.sumOf { it.carbs },
             totalFat = ingredientList.sumOf { it.fat },
+            ingredientErrorMessage = input.ingredientErrorMessage,
             errorMessage = input.errorMessage,
             isLoading = false
         )
@@ -361,6 +366,14 @@ class AddMealViewModel(
         }
 
         viewModelScope.launch {
+            val templateAlreadyExists = repository.mealTemplateNameExists(templateName)
+
+            if (templateAlreadyExists) {
+                templateSavedMessage.value = null
+                errorMessage.value = "Szablon o tej nazwie już istnieje."
+                return@launch
+            }
+
             repository.addMealTemplate(
                 name = templateName,
                 ingredients = state.ingredients.map { it.toRepositoryDraft() }
@@ -401,39 +414,59 @@ class AddMealViewModel(
     }
 
     fun selectProduct(product: ProductEntity) {
+        val previousProductID = selectedProductID.value
+
         selectedProductID.value = product.productID
         selectedUnitName.value = product.baseUnit
+
+        if (previousProductID != product.productID) {
+            amountText.value = ""
+        }
+
+        ingredientErrorMessage.value = null
         errorMessage.value = null
     }
 
     fun changeAmount(value: String) {
         amountText.value = value.replace(",", ".")
+        ingredientErrorMessage.value = null
         errorMessage.value = null
     }
 
     fun selectUnit(unitName: String) {
         selectedUnitName.value = unitName
+        ingredientErrorMessage.value = null
         errorMessage.value = null
     }
 
     fun addSelectedIngredient() {
         val state = uiState.value
         val product = state.selectedProduct
+        val isAmountBlank = state.amountText.isBlank()
+        val amount = state.amountText.toDoubleOrNull()
 
-        if (product == null) {
-            errorMessage.value = "Wybierz produkt."
+        if (product == null && isAmountBlank) {
+            ingredientErrorMessage.value = "Wybierz produkt i wpisz ilość."
             return
         }
 
-        val amount = state.amountText.toDoubleOrNull()
+        if (product == null) {
+            ingredientErrorMessage.value = "Wybierz produkt."
+            return
+        }
+
+        if (isAmountBlank) {
+            ingredientErrorMessage.value = "Wpisz ilość składnika."
+            return
+        }
 
         if (amount == null || amount <= 0.0) {
-            errorMessage.value = "Wpisz poprawną ilość."
+            ingredientErrorMessage.value = "Wpisz poprawną ilość większą od 0."
             return
         }
 
         if (state.selectedUnitName.isBlank()) {
-            errorMessage.value = "Wybierz jednostkę."
+            ingredientErrorMessage.value = "Wybierz jednostkę."
             return
         }
 
@@ -462,6 +495,7 @@ class AddMealViewModel(
         ingredients.value = ingredients.value + ingredient
 
         amountText.value = ""
+        ingredientErrorMessage.value = null
         errorMessage.value = null
     }
 
@@ -470,6 +504,26 @@ class AddMealViewModel(
             it.draftIngredientID == draftIngredientID
         }
 
+        errorMessage.value = null
+    }
+
+    private fun resetMealForm() {
+        selectedProductID.value = null
+        editMealID.value = null
+        loadedEditMealID = null
+
+        mealNameText.value = ""
+        selectedDate.value = TrackingDateUtils.getCurrentTrackingDate()
+
+        amountText.value = ""
+        selectedUnitName.value = ""
+
+        ingredients.value = emptyList()
+
+        showTemplates.value = false
+        templateSavedMessage.value = null
+
+        ingredientErrorMessage.value = null
         errorMessage.value = null
     }
 
@@ -500,6 +554,7 @@ class AddMealViewModel(
             }
 
             app.refreshWidgets()
+            resetMealForm()
             onSuccess()
         }
     }
@@ -575,7 +630,8 @@ class AddMealViewModel(
     private data class AmountUnitErrorState(
         val amountText: String = "",
         val selectedUnitName: String = "",
-        val errorMessage: String? = null
+        val errorMessage: String? = null,
+        val ingredientErrorMessage: String? = null
     )
 
     private data class InputState(
@@ -584,7 +640,8 @@ class AddMealViewModel(
         val selectedDate: LocalDate = TrackingDateUtils.getCurrentTrackingDate(),
         val amountText: String = "",
         val selectedUnitName: String = "",
-        val errorMessage: String? = null
+        val errorMessage: String? = null,
+        val ingredientErrorMessage: String? = null
     )
 
     private data class CalculatedMacros(

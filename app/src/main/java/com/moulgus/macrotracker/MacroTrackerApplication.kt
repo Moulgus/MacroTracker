@@ -14,6 +14,7 @@ import com.moulgus.macrotracker.widget.MacroTrackerWidgetUpdater
 import com.moulgus.macrotracker.data.local.database.MIGRATION_2_3
 import com.moulgus.macrotracker.widget.MacroTrackerWidgetAlarmScheduler
 import com.moulgus.macrotracker.data.local.database.MIGRATION_3_4
+import com.moulgus.macrotracker.data.backup.MacroBackupManager
 
 class MacroTrackerApplication : Application() {
 
@@ -45,6 +46,15 @@ class MacroTrackerApplication : Application() {
             dataStore = applicationContext.userSettingsDataStore
         )
     }
+
+    val backupManager: MacroBackupManager by lazy {
+        MacroBackupManager(
+            context = applicationContext,
+            database = database,
+            userSettingsRepository = userSettingsRepository
+        )
+    }
+
     fun refreshWidgets() {
         applicationScope.launch {
             MacroTrackerWidgetUpdater.update(applicationContext)

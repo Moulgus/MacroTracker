@@ -24,15 +24,21 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.moulgus.macrotracker.data.local.entity.ProductEntity
-import java.util.Locale
 import androidx.compose.ui.Alignment
 import com.moulgus.macrotracker.ui.components.FavoriteStarButton
 import com.moulgus.macrotracker.ui.components.ProductCategorySelector
+import androidx.compose.material3.AlertDialog
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.moulgus.macrotracker.util.formatSmart
+import com.moulgus.macrotracker.ui.components.EmptyStateCard
 
 @Composable
 fun ProductsScreen(
     onBackClick: () -> Unit,
     onAddProductClick: () -> Unit,
+    onEditProductClick: (Long) -> Unit,
     onProductUnitsClick: (Long) -> Unit,
     viewModel: ProductsViewModel = viewModel()
 ) {
@@ -40,6 +46,7 @@ fun ProductsScreen(
 
     ProductsScreenContent(
         uiState = uiState,
+        onEditProductClick = onEditProductClick,
         onBackClick = onBackClick,
         onSearchQueryChange = viewModel::changeSearchQuery,
         onAddProductClick = onAddProductClick,
@@ -53,6 +60,7 @@ fun ProductsScreen(
 @Composable
 private fun ProductsScreenContent(
     uiState: ProductsUiState,
+    onEditProductClick: (Long) -> Unit,
     onBackClick: () -> Unit,
     onSearchQueryChange: (String) -> Unit,
     onAddProductClick: () -> Unit,
@@ -62,6 +70,47 @@ private fun ProductsScreenContent(
     onDeleteProductClick: (ProductEntity) -> Unit
 ) {
     val productListState = rememberLazyListState()
+
+    var productToDelete by remember {
+        mutableStateOf<ProductEntity?>(null)
+    }
+
+    if (productToDelete != null) {
+        val product = productToDelete!!
+
+        AlertDialog(
+            onDismissRequest = {
+                productToDelete = null
+            },
+            title = {
+                Text(text = "Usunąć produkt?")
+            },
+            text = {
+                Text(
+                    text = "Produkt „${product.name}” zostanie usunięty z listy. Tej operacji nie można cofnąć."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteProductClick(product)
+                        productToDelete = null
+                    }
+                ) {
+                    Text(text = "Usuń")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = {
+                        productToDelete = null
+                    }
+                ) {
+                    Text(text = "Anuluj")
+                }
+            }
+        )
+    }
 
     LaunchedEffect(uiState.searchQuery) {
         productListState.animateScrollToItem(0)
@@ -144,9 +193,15 @@ private fun ProductsScreenContent(
             ) {
                 if (uiState.products.isEmpty()) {
                     item {
-                        Text(
-                            text = "Nie znaleziono produktu.",
-                            style = MaterialTheme.typography.bodyMedium
+                        EmptyStateCard(
+                            title = "Brak produktów",
+                            message = if (uiState.searchQuery.isBlank() && uiState.selectedCategory == "Wszystkie") {
+                                "Nie ma jeszcze żadnych produktów na liście."
+                            } else {
+                                "Nie znaleziono produktów dla wybranej kategorii lub wpisanej frazy."
+                            },
+                            actionText = "Dodaj produkt",
+                            onActionClick = onAddProductClick
                         )
                     }
                 } else {
@@ -158,7 +213,8 @@ private fun ProductsScreenContent(
                             product = product,
                             onFavoriteClick = { onFavoriteClick(product) },
                             onUnitsClick = { onProductUnitsClick(product.productID) },
-                            onDeleteClick = { onDeleteProductClick(product) }
+                            onEditClick = { onEditProductClick(product.productID) },
+                            onDeleteClick = { productToDelete = product }
                         )
                     }
                 }
@@ -172,6 +228,7 @@ private fun ProductListItem(
     product: ProductEntity,
     onFavoriteClick: () -> Unit,
     onUnitsClick: () -> Unit,
+    onEditClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
     Card(
@@ -216,12 +273,12 @@ private fun ProductListItem(
                     }
 
                     Text(
-                        text = "${product.kcalPer100.format(0)} kcal / 100 ${product.baseUnit}",
+                        text = "${product.kcalPer100.formatSmart(0)} kcal / 100 ${product.baseUnit}",
                         style = MaterialTheme.typography.bodyMedium
                     )
 
                     Text(
-                        text = "B: ${product.proteinPer100.format(1)} g  W: ${product.carbsPer100.format(1)} g  T: ${product.fatPer100.format(1)} g",
+                        text = "B: ${product.proteinPer100.formatSmart(1)} g  W: ${product.carbsPer100.formatSmart(1)} g  T: ${product.fatPer100.formatSmart(1)} g",
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -233,20 +290,32 @@ private fun ProductListItem(
             }
 
             Text(
-                text = "${product.kcalPer100.format(0)} kcal / 100 ${product.baseUnit}",
+                text = "${product.kcalPer100.formatSmart(0)} kcal / 100 ${product.baseUnit}",
                 style = MaterialTheme.typography.bodyMedium
             )
 
             Text(
-                text = "B: ${product.proteinPer100.format(1)} g  W: ${product.carbsPer100.format(1)} g  T: ${product.fatPer100.format(1)} g",
+                text = "B: ${product.proteinPer100.formatSmart(1)} g  W: ${product.carbsPer100.formatSmart(1)} g  T: ${product.fatPer100.formatSmart(1)} g",
                 style = MaterialTheme.typography.bodyMedium
             )
 
-            Button(
-                onClick = onUnitsClick,
-                modifier = Modifier.fillMaxWidth()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(text = "Jednostki")
+                Button(
+                    onClick = onUnitsClick,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = "Jednostki")
+                }
+
+                Button(
+                    onClick = onEditClick,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = "Edytuj")
+                }
             }
 
             if (product.isCustom) {
@@ -259,8 +328,4 @@ private fun ProductListItem(
             }
         }
     }
-}
-
-private fun Double.format(decimals: Int): String {
-    return "%.${decimals}f".format(Locale.US, this)
 }

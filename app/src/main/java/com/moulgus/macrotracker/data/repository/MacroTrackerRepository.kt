@@ -194,6 +194,10 @@ class MacroTrackerRepository(
         return mealTemplateDao.getTemplateWithEntriesByID(templateID)
     }
 
+    suspend fun mealTemplateNameExists(name: String): Boolean {
+        return mealTemplateDao.getTemplateCountByName(name.trim()) > 0
+    }
+
     suspend fun addMealTemplate(
         name: String,
         ingredients: List<MealIngredientDraft>

@@ -41,6 +41,7 @@ data class AddMealUiState(
     val totalCarbs: Double = 0.0,
     val totalFat: Double = 0.0,
 
+    val ingredientErrorMessage: String? = null,
     val errorMessage: String? = null,
     val isLoading: Boolean = true
 

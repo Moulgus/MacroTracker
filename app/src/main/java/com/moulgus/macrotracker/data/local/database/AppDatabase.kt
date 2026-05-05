@@ -13,6 +13,7 @@ import com.moulgus.macrotracker.data.local.entity.MealTemplateEntryEntity
 import com.moulgus.macrotracker.data.local.entity.MealTemplateEntity
 import com.moulgus.macrotracker.data.local.entity.ProductEntity
 import com.moulgus.macrotracker.data.local.entity.ProductUnitEntity
+import com.moulgus.macrotracker.data.local.dao.BackupDao
 
 @Database(
     entities = [
@@ -37,4 +38,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun mealEntryDao(): MealEntryDao
 
     abstract fun mealTemplateDao(): MealTemplateDao
+
+    abstract fun backupDao(): BackupDao
 }

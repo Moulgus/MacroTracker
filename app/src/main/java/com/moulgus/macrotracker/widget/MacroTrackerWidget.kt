@@ -20,10 +20,9 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.moulgus.macrotracker.MainActivity
-import java.util.Locale
 import androidx.compose.runtime.Composable
 import androidx.glance.layout.Box
-
+import com.moulgus.macrotracker.util.formatSmart
 
 class MacroTrackerWidget : GlanceAppWidget() {
 
@@ -80,7 +79,7 @@ private fun MacroTrackerWidgetContent(
             horizontalAlignment = Alignment.Start
         ) {
             Text(
-                text = "${data.eatenKcal.format(0)} / ${data.kcalGoal.format(0)} kcal",
+                text = "${data.eatenKcal.formatSmart(0)} / ${data.kcalGoal.formatSmart(0)} kcal",
                 style = TextStyle(
                     color = primaryTextColor,
                     fontSize = 19.sp,
@@ -96,7 +95,7 @@ private fun MacroTrackerWidgetContent(
             horizontalAlignment = Alignment.Start
         ) {
             Text(
-                text = "B: ${data.eatenProtein.format(0)} / ${data.proteinGoal.format(0)} g",
+                text = "B: ${data.eatenProtein.formatSmart(0)} / ${data.proteinGoal.formatSmart(0)} g",
                 style = TextStyle(
                     color = secondaryTextColor,
                     fontSize = 15.sp,
@@ -105,7 +104,7 @@ private fun MacroTrackerWidgetContent(
             )
 
             Text(
-                text = "W: ${data.eatenCarbs.format(0)} / ${data.carbsGoal.format(0)} g",
+                text = "W: ${data.eatenCarbs.formatSmart(0)} / ${data.carbsGoal.formatSmart(0)} g",
                 style = TextStyle(
                     color = secondaryTextColor,
                     fontSize = 15.sp,
@@ -114,7 +113,7 @@ private fun MacroTrackerWidgetContent(
             )
 
             Text(
-                text = "T: ${data.eatenFat.format(0)} / ${data.fatGoal.format(0)} g",
+                text = "T: ${data.eatenFat.formatSmart(0)} / ${data.fatGoal.formatSmart(0)} g",
                 style = TextStyle(
                     color = secondaryTextColor,
                     fontSize = 15.sp,
@@ -123,8 +122,4 @@ private fun MacroTrackerWidgetContent(
             )
         }
     }
-}
-
-private fun Double.format(decimals: Int): String {
-    return "%.${decimals}f".format(Locale.US, this)
 }

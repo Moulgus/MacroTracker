@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import com.moulgus.macrotracker.widget.MacroTrackerWidgetUpdater
+import android.net.Uri
 
 class SettingsViewModel(
     application: Application
@@ -126,6 +127,36 @@ class SettingsViewModel(
             successMessage.value = "Zapisano cele."
         }
     }
+
+    fun exportBackup(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                app.backupManager.exportToUri(uri)
+
+                errorMessage.value = null
+                successMessage.value = "Eksport danych zakończony."
+            } catch (exception: Exception) {
+                successMessage.value = null
+                errorMessage.value = "Nie udało się wyeksportować danych."
+            }
+        }
+    }
+
+    fun importBackup(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                app.backupManager.importFromUri(uri)
+                app.refreshWidgets()
+
+                errorMessage.value = null
+                successMessage.value = "Import danych zakończony."
+            } catch (exception: Exception) {
+                successMessage.value = null
+                errorMessage.value = "Nie udało się zaimportować danych."
+            }
+        }
+    }
+
 
     private fun normalizeDecimalInput(value: String): String {
         return value.replace(",", ".")

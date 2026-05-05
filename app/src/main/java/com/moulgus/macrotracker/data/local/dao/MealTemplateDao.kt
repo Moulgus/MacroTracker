@@ -27,6 +27,12 @@ interface MealTemplateDao {
     """)
     suspend fun getTemplateWithEntriesByID(templateID: Long): MealTemplateWithEntries?
 
+    @Query("""
+    SELECT COUNT(*) FROM meal_templates
+    WHERE LOWER(name) = LOWER(:name)
+    """)
+    suspend fun getTemplateCountByName(name: String): Int
+
     @Insert
     suspend fun insertTemplate(template: MealTemplateEntity): Long
 
@@ -51,4 +57,6 @@ interface MealTemplateDao {
 
     @Query("DELETE FROM meal_templates WHERE templateID = :templateID")
     suspend fun deleteTemplateByID(templateID: Long)
+
+
 }

@@ -26,7 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.moulgus.macrotracker.data.local.model.MealWithEntries
-import java.util.Locale
 import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -34,8 +33,12 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.moulgus.macrotracker.util.formatSmart
+import com.moulgus.macrotracker.ui.components.EmptyStateCard
 
 @Composable
 fun TodayScreen(
@@ -93,6 +96,44 @@ private fun TodayScreenContent(
     onSettingsClick: () -> Unit,
     onStatisticsClick: () -> Unit
 ) {
+    var mealToDelete by remember {
+        mutableStateOf<MealWithEntries?>(null)
+    }
+
+    if (mealToDelete != null) {
+        val meal = mealToDelete!!
+
+        AlertDialog(
+            onDismissRequest = {
+                mealToDelete = null
+            },
+            title = {
+                Text(text = "Usunąć posiłek?")
+            },
+            text = {
+                Text(text = "Tej operacji nie można cofnąć.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteMealClick(meal)
+                        mealToDelete = null
+                    }
+                ) {
+                    Text(text = "Usuń")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = {
+                        mealToDelete = null
+                    }
+                ) {
+                    Text(text = "Anuluj")
+                }
+            }
+        )
+    }
     Scaffold { innerPadding ->
         Column(
             modifier = Modifier
@@ -155,9 +196,23 @@ private fun TodayScreenContent(
             Spacer(modifier = Modifier.height(8.dp))
 
             if (uiState.meals.isEmpty()) {
-                Text(
-                    text = "Nie dodano jeszcze żadnych posiłków dzisiaj.",
-                    style = MaterialTheme.typography.bodyMedium
+                EmptyStateCard(
+                    title = "Brak posiłków",
+                    message = if (uiState.isCurrentTrackingDate) {
+                        "Nie masz jeszcze posiłków w dzisiejszym dniu. Dodaj pierwszy posiłek, żeby zacząć liczenie makro."
+                    } else {
+                        "Nie ma zapisanych posiłków dla wybranego dnia."
+                    },
+                    actionText = if (uiState.isCurrentTrackingDate) {
+                        "Dodaj posiłek"
+                    } else {
+                        null
+                    },
+                    onActionClick = if (uiState.isCurrentTrackingDate) {
+                        onAddMealClick
+                    } else {
+                        null
+                    }
                 )
             } else {
                 LazyColumn(
@@ -173,7 +228,7 @@ private fun TodayScreenContent(
                                 onEditMealClick(meal.meal.mealID)
                             },
                             onDeleteClick = {
-                                onDeleteMealClick(meal)
+                                mealToDelete = meal
                             }
                         )
                     }
@@ -356,7 +411,7 @@ private fun MacroProgressRow(
             )
 
             Text(
-                text = "${eaten.format(decimals)} / ${goal.format(decimals)} $unit"
+                text = "${eaten.formatSmart(decimals)} / ${goal.formatSmart(decimals)} $unit"
             )
         }
 
@@ -370,7 +425,7 @@ private fun MacroProgressRow(
         Spacer(modifier = Modifier.height(2.dp))
 
         Text(
-            text = "Pozostało: ${remaining.format(decimals)} $unit",
+            text = "Pozostało: ${remaining.formatSmart(decimals)} $unit",
             style = MaterialTheme.typography.bodySmall
         )
     }
@@ -407,7 +462,7 @@ private fun MealItem(
                 ) {
                     meal.entries.forEach { entry ->
                         Text(
-                            text = "${entry.productName} — ${entry.amount.format(1)} ${entry.unitName}",
+                            text = "${entry.productName} — ${entry.amount.formatSmart(1)} ${entry.unitName}",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -417,13 +472,13 @@ private fun MealItem(
                     modifier = Modifier.padding(start = 12.dp)
                 ) {
                     Text(
-                        text = "Kcal: ${meal.kcal.format(0)}",
+                        text = "Kcal: ${meal.kcal.formatSmart(0)}",
                         fontWeight = FontWeight.Bold
                     )
 
-                    Text(text = "B: ${meal.protein.format(1)} g")
-                    Text(text = "W: ${meal.carbs.format(1)} g")
-                    Text(text = "T: ${meal.fat.format(1)} g")
+                    Text(text = "B: ${meal.protein.formatSmart(1)} g")
+                    Text(text = "W: ${meal.carbs.formatSmart(1)} g")
+                    Text(text = "T: ${meal.fat.formatSmart(1)} g")
                 }
             }
 
@@ -453,8 +508,4 @@ private fun MealItem(
             }
         }
     }
-}
-
-private fun Double.format(decimals: Int): String {
-    return "%.${decimals}f".format(Locale.US, this)
 }
